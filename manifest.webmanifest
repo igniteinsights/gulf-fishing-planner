@@ -1,0 +1,29 @@
+{
+  "name": "Gulf Fishing Planner",
+  "short_name": "Gulf Fish",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "description": "Tides, weather, sea temperature, likely fish and your own spots for the Hauraki Gulf, Northland and Bay of Plenty.",
+  "theme_color": "#0B4F6C",
+  "background_color": "#F3F8FA",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

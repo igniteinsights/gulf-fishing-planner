@@ -379,7 +379,7 @@ dialog::backdrop{ background:var(--scrim); }
 .seg{ display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--outline-strong); border-radius:20px; overflow:hidden; margin:8px 0 16px; }
 .seg button{ border:0; background:transparent; min-height:40px; font-size:.875rem; font-weight:500; cursor:pointer; color:var(--ink); }
 .seg button + button{ border-left:1px solid var(--outline-strong); }
-.seg button[aria-selected="true"]{ background:var(--secondary-container); color:var(--on-secondary-container); }
+.seg button[aria-selected="true"], .seg button[aria-pressed="true"]{ background:var(--secondary-container); color:var(--on-secondary-container); }
 ol.howto{ padding-left:22px; margin:0 0 16px; display:grid; gap:8px; }
 .snackbar{ position:fixed; left:50%; bottom:104px; transform:translate(-50%, 20px); opacity:0; pointer-events:none; background:var(--ink); color:var(--surface-1);
   padding:14px 18px; border-radius:8px; font-size:.875rem; max-width:calc(100vw - 32px); transition:all .2s; z-index:40; }
@@ -439,6 +439,7 @@ body.on-map footer{ display:none; }
 .sheet-head{ display:flex; align-items:flex-start; gap:8px; }
 .sheet-title-wrap{ flex:1; min-width:0; }
 .sheet-title{ font-size:1.25rem; overflow-wrap:anywhere; }
+.spot-notes{ overflow-wrap:anywhere; white-space:pre-line; }
 .spot-actions{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 16px; }
 .spot-row{ width:100%; border:0; text-align:left; cursor:pointer; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-s); background:var(--surface-2); color:var(--ink); font:inherit; }
 .spot-row:hover{ background:var(--surface-3); }
@@ -594,8 +595,8 @@ body.on-map footer{ display:none; }
         <div class="map-wrap" id="mapWrap">
           <div id="map" class="map-canvas" role="region" aria-label="Fishing map"></div>
           <div class="map-tools">
-            <div class="seg map-base" role="tablist" aria-label="Base map">
-              <button role="tab" data-base="map" aria-selected="true">Map</button><button role="tab" data-base="sat" aria-selected="false">Satellite</button>
+            <div class="seg map-base" role="group" aria-label="Base map">
+              <button type="button" data-base="map" aria-pressed="true">Map</button><button type="button" data-base="sat" aria-pressed="false">Satellite</button>
             </div>
             <label class="map-region"><span class="sr-only">Region</span><select id="regionSel"><option value="gulf">Hauraki Gulf</option><option value="nl">Northland</option><option value="bop">Bay of Plenty</option></select></label>
             <div class="map-actions">
@@ -671,7 +672,7 @@ body.on-map footer{ display:none; }
             <li>Fish photos: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>; each photographer and licence is credited under the photo.</li>
             <li>Your spots are stored only in this browser on this device.</li>
           </ul>
-          <p>Version 5.1 · built 3 October 2026.</p>
+          <p>Version 5.1 · built 3 October 2026. <button class="btn text" type="button" id="updBtn" hidden>Check for updates</button></p>
         </details>
       </footer>
     </main>
@@ -782,8 +783,38 @@ function nearestPoint(lat, lon, points){
   for(const p of points){ const d = (p.lat - lat) ** 2 + ((p.lon - lon) * k) ** 2; if(d < bd){ bd = d; best = p; } }
   return best;
 }
-function fallbackSST(lat, lon, areas, sstByKey){
-  const have = areas.filter(a => sstByKey[a.key] != null);
+function distKm(lat1, lon1, lat2, lon2){
+  const R = 6371, r = Math.PI / 180, dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+/* Nearest tide port that has data for the day. Auckland stands in (approx) when the nearest port has none;
+   ports further than maxKm away are labelled approx too. */
+function choosePort(lat, lon, ports, hasData, maxKm){
+  const k = portFor(lat, lon, ports);
+  if(k !== 'auckland' && !hasData(k) && hasData('auckland')) return { port:'auckland', approx:true };
+  return { port:k, approx:distKm(lat, lon, ports[k].lat, ports[k].lon) > maxKm };
+}
+/* Text safe inside XML: escaped, minus the control characters XML 1.0 forbids (pasted notes can carry them). */
+function xmlText(s){
+  return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+/* Like withTimeout, but the clock only runs while doc is visible (a hidden page draws no frames, so maps can't load). */
+function visibleTimeout(p, ms, label, doc){
+  return new Promise((ok, fail) => {
+    let left = ms, t = null, started = 0;
+    const stop = () => { clearTimeout(t); t = null; doc.removeEventListener('visibilitychange', tick); };
+    const tick = () => {
+      if(doc.visibilityState === 'hidden'){ if(t){ clearTimeout(t); t = null; left -= Date.now() - started; } return; }
+      if(!t){ started = Date.now(); t = setTimeout(() => { stop(); fail(new Error(label + ' timed out')); }, Math.max(0, left)); }
+    };
+    doc.addEventListener('visibilitychange', tick); tick();
+    p.then(v => { stop(); ok(v); }, e => { stop(); fail(e); });
+  });
+}
+function fallbackSST(lat, lon, areas, sstByKey, maxKm){
+  const have = areas.filter(a => sstByKey[a.key] != null && (maxKm == null || distKm(lat, lon, a.lat, a.lon) <= maxKm));
   const a = have.length ? nearestPoint(lat, lon, have) : null;
   return { sst:a ? sstByKey[a.key] : null, area:a };
 }
@@ -1099,11 +1130,8 @@ const TIDE_PORTS = {
   tauranga: { name:'Tauranga', lat:-37.64, lon:176.18, start:'2026-09-01', days:TIDE_DATA_TAURANGA.split('|') }
 };
 /* Nearest tide port for a pin; Auckland (labelled approx) if that port has no data for the date. */
-function tidePortFor(lat, lon, dateStr){
-  const k = portFor(lat, lon, TIDE_PORTS);
-  if(k !== 'auckland' && !tidesFor(dateStr, k) && tidesFor(dateStr, 'auckland')) return { port:'auckland', approx:true };
-  return { port:k, approx:false };
-}
+const LOCAL_KM = 150;   // beyond this, tides and sea temperature from the nearest port/area are only approximate
+function tidePortFor(lat, lon, dateStr){ return choosePort(lat, lon, TIDE_PORTS, k => !!tidesFor(dateStr, k), LOCAL_KM); }
 
 /* Date + minutes-past-midnight in Auckland, whatever timezone the device is set to. */
 function nzParts(d){
@@ -1515,7 +1543,7 @@ function ddm(lat, lon){
   return f(lat, 'N', 'S', 2) + ' ' + f(lon, 'E', 'W', 3);
 }
 function buildGPX(spots, title){
-  const x = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const x = xmlText;
   return '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Hauraki Gulf Fishing Planner" xmlns="http://www.topografix.com/GPX/1/1">\n'
     + '  <metadata><name>' + x(title) + '</name></metadata>\n'
     + spots.map(s => '  <wpt lat="' + s.lat.toFixed(5) + '" lon="' + s.lon.toFixed(5) + '"><name>' + x(s.short) + '</name><desc>' + x(s.desc != null ? s.desc : s.name + ' (approximate area, check chart)') + '</desc><sym>Fishing Area</sym></wpt>').join('\n')
@@ -2312,9 +2340,11 @@ async function refreshAll(){
   btn.classList.remove('spin'); btn.disabled = false;
   renderToday(); renderSST(); renderVintage(); renderReportsAge();
   runGemini(false);
-  refreshVisiblePins(true);
-  if(SEL_PIN){ const sp = loadPins().find(p => p.id === SEL_PIN); if(sp) renderSpotBody(sp, true); }
   if(!$('tab-plan').hidden) renderBriefing(); else renderBriefing.dirty = true;
+  try{
+    refreshVisiblePins(true);
+    if(SEL_PIN){ const sp = loadPins().find(p => p.id === SEL_PIN); if(sp) renderSpotBody(sp, true); }
+  }catch(e){ /* spots are extras: never let them stop the core refresh */ }
   return results;
 }
 
@@ -2328,6 +2358,11 @@ const SAT_STYLE = { version:8,
     tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'] } },
   layers:[{ id:'sat', type:'raster', source:'sat' }] };
 const GULF_VIEW = { center:[175.1, -36.6], zoom:8.6 };
+function syncRegionSelect(){
+  const sel = $('regionSel'); if(!sel || !MAP) return;
+  const c = MAP.getCenter();
+  sel.value = Object.entries(REGION_VIEWS).sort((a, b) => distKm(c.lat, c.lng, a[1].center[1], a[1].center[0]) - distKm(c.lat, c.lng, b[1].center[1], b[1].center[0]))[0][0];
+}
 const REGION_VIEWS = { gulf:GULF_VIEW, nl:{ center:[174.35, -35.35], zoom:8.4 }, bop:{ center:[176.55, -37.62], zoom:8.6 } };
 let MAP = null, mapReady = null, MAP_BASE = LS.get('ghfp.mapBase') === 'sat' ? 'sat' : 'map', PIN_MARKERS = {};
 
@@ -2381,11 +2416,10 @@ async function initMap(){
       MAP.once('load', res);
       MAP.on('error', e => { if(!MAP.loaded() && !(e && e.sourceId)) rej(e && e.error || new Error('map style')); });   // style failure; tile errors carry a sourceId
     });
-    // A hidden page (screen off, app switched) draws no frames, so 'load' can't fire: start the clock once it's visible.
-    if(document.visibilityState === 'hidden') await Promise.race([loaded, new Promise(r => document.addEventListener('visibilitychange', r, { once:true }))]);
-    await withTimeout(loaded, 12000, 'map load');
+    // A hidden page (screen off, app switched) draws no frames, so 'load' can't fire: only count visible time.
+    await visibleTimeout(loaded, 12000, 'map load', document);
   }catch(err){ MAP.remove(); MAP = null; PIN_MARKERS = {}; throw err; }
-  MAP.on('moveend', () => refreshVisiblePins());
+  MAP.on('moveend', () => { refreshVisiblePins(); syncRegionSelect(); });
   refreshVisiblePins();
 }
 function showMapOff(msg){
@@ -2397,7 +2431,7 @@ function setBase(base){
   MAP_BASE = base; LS.set('ghfp.mapBase', base); syncBaseButtons();
   if(MAP) MAP.setStyle(styleFor(base));
 }
-function syncBaseButtons(){ document.querySelectorAll('.map-base button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.base === MAP_BASE))); }
+function syncBaseButtons(){ document.querySelectorAll('.map-base button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.base === MAP_BASE))); }
 function drawStaticMarkers(){
   REFERENCE_POINTS.forEach(p => {
     const el = document.createElement('div'); el.className = 'ref-mk'; el.textContent = p.name.split(' — ')[0];
@@ -2438,6 +2472,7 @@ function loadPins(){
 }
 function savePins(pins){
   if(!PINS_MEM && LS.set(PINS_KEY, pins)) return;
+  if(!PINS_MEM){ LS.del(PIN_LIVE_KEY); if(LS.set(PINS_KEY, pins)) return; }   // storage full of cached forecasts: free it and retry
   if(!PINS_MEM) snack('This browser won’t save spots, so they’ll be gone when you close the page.');
   PINS_MEM = pins;
 }
@@ -2447,7 +2482,7 @@ function upsertPin(raw){
   if(i >= 0) pins[i] = p; else pins.push(p);
   savePins(pins); return p;
 }
-function deletePin(id){ savePins(loadPins().filter(p => p.id !== id)); }
+function deletePin(id){ savePins(loadPins().filter(p => p.id !== id)); delete PIN_LIVE[id]; persistPinLive(); }
 
 /* Per-pin forecasts: 1 h cache, at most 4 requests in flight, last 20 kept across reloads. */
 const PIN_LIVE_KEY = 'ghfp.pinLive', PIN_LIVE_TTL = 3600 * 1000;
@@ -2479,8 +2514,10 @@ const MAP_AREAS = REFERENCE_POINTS.map(p => Object.assign({ region:'gulf' }, p))
 function areaLive(a){ return a.region === 'gulf' ? LIVE[a.key] : PIN_LIVE['area:' + a.key]; }
 /* Fetch the nearest non-Gulf area so pins out there have a sea-temperature fallback. */
 function ensureNearArea(p){
+  const own = PIN_LIVE[p.id];
+  if(!own || (!own.error && sstFromMarine(own.marine, todayNZ()) != null)) return null;   // not loaded yet, or has its own SST
   const a = nearestPoint(p.lat, p.lon, MAP_AREAS);
-  if(a.region === 'gulf' || pinTried('area:' + a.key)) return null;
+  if(a.region === 'gulf' || pinTried('area:' + a.key) || distKm(p.lat, p.lon, a.lat, a.lon) > LOCAL_KM) return null;
   return getPinLive({ id:'area:' + a.key, lat:a.lat, lon:a.lon });
 }
 function pinSST(live, p, dateStr){
@@ -2488,7 +2525,7 @@ function pinSST(live, p, dateStr){
   if(own != null) return { sst:own, nearest:null };
   const by = {};
   MAP_AREAS.forEach(a => { const d = areaLive(a); by[a.key] = d && !d.error ? sstFromMarine(d.marine, dateStr) : null; });
-  const f = fallbackSST(p.lat, p.lon, MAP_AREAS, by);
+  const f = fallbackSST(p.lat, p.lon, MAP_AREAS, by, LOCAL_KM);
   return { sst:f.sst, nearest:f.area };
 }
 
@@ -2508,6 +2545,7 @@ function openSpot(id, fly, day){
   if(fly && MAP) MAP.easeTo({ center:[p.lon, p.lat], zoom:Math.max(MAP.getZoom(), 11), duration:reducedMotion() ? 0 : 600 });
   const sh = $('sheet'); sh.hidden = false; sh.scrollTop = 0;
   sh.innerHTML = spotHeader(p) + '<div id="spotBody"></div>';
+  const ttl = sh.querySelector('.sheet-title'); ttl.tabIndex = -1; ttl.focus({ preventScroll:true });
   wireSpotHeader(p);
   renderSpotBody(p);
 }
@@ -2518,7 +2556,7 @@ function renderSpotBody(p, fetched){
   body.querySelectorAll('.day-btn').forEach(b => b.addEventListener('click', () => { SPOT_DAY = +b.dataset.day; renderSpotBody(p, true); }));
   body.querySelectorAll('.lf-row').forEach(b => b.addEventListener('click', () => showSpecies(b.dataset.sp)));
   if(!fetched && !pinTried(p.id)) getPinLive(p).then(() => { renderSpotBody(p, true); updatePinBadge(p); });
-  if(!fetched){ const w = ensureNearArea(p); if(w) w.then(() => renderSpotBody(p, true)); }
+  const w = ensureNearArea(p); if(w) w.then(() => renderSpotBody(p, true));   // runs again once the pin's own data lands
 }
 function spotBodyHTML(p, live){
   const today = todayNZ(), days = Array.from({ length:7 }, (_, i) => addDaysStr(today, i)), dateStr = days[SPOT_DAY];
@@ -2612,8 +2650,8 @@ function renderBestSpots(){
         fish:likelyFor(p, monthOf(dateStr), pinSST(live, p, dateStr).sst, SPECIES) };
     }));
     const shown = BEST_ALL ? ranked : ranked.slice(0, 5);
-    el.innerHTML = head + '<ol class="bs-list"' + (ranked.some(r => r.loading) ? ' aria-busy="true"' : '') + '>' + shown.map((r, i) => '<li><button type="button" class="bs-row" data-id="' + esc(r.pin.id) + '" aria-label="' + esc(r.pin.name) + ': ' + r.rank + '">'
-        + '<span class="bs-pos">' + (i + 1) + '</span><span class="bs-ring">' + miniRing(r.rank, r.hasForecast) + '<b>' + r.rank + '</b></span>'
+    el.innerHTML = head + '<ol class="bs-list"' + (ranked.some(r => r.loading) ? ' aria-busy="true"' : '') + '>' + shown.map((r, i) => '<li><button type="button" class="bs-row" data-id="' + esc(r.pin.id) + '">'
+        + '<span class="bs-pos">' + (i + 1) + '</span><span class="bs-ring">' + miniRing(r.rank, r.hasForecast) + '<b><span class="sr-only">score </span>' + r.rank + '</b></span>'
         + '<span class="bs-main"><span class="bs-name">' + esc(r.pin.name) + '</span><span class="bs-meta">'
           + (r.loading ? '<span>Loading forecast…</span>' : r.sum.windKt == null ? '<span>Tide and moon only</span>'
             : '<span class="wind-tag ' + windClass(r.sum.windKt) + '">' + Math.round(r.sum.windKt) + ' kt ' + windDirLabel(r.sum.windDir) + '</span>')
@@ -2638,7 +2676,8 @@ async function openSpotFromToday(id, day){
   openSpot(id, true, day);
 }
 function showSpecies(id){
-  speciesFilter = 'all'; renderSpecies(); setTab('species');
+  if(!document.getElementById('sp-' + id)){ speciesFilter = 'all'; renderSpecies(); }
+  setTab('species');
   const el = document.getElementById('sp-' + id); if(!el) return;
   el.scrollIntoView({ block:'start', behavior:reducedMotion() ? 'auto' : 'smooth' });
   el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600);
@@ -2706,7 +2745,7 @@ function spotHeader(p){
     + '<div class="xsmall muted">' + p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + (p.depth ? ' · ' + p.depth + ' m' : '') + '</div></div>'
     + '<button class="icon-btn" type="button" data-act="close" aria-label="' + (isWide() ? 'Back to my spots' : 'Close') + '">' + icon('close') + '</button></div>'
     + (p.habitats.length ? '<div class="chips sp-chips" style="margin:8px 0;">' + p.habitats.map(h => '<span class="chip static">' + habLabel(h) + '</span>').join('') + '</div>' : '')
-    + (p.notes ? '<p class="small">' + esc(p.notes) + '</p>' : '')
+    + (p.notes ? '<p class="small spot-notes">' + esc(p.notes) + '</p>' : '')
     + '<div class="spot-actions"><button class="btn tonal" type="button" data-act="edit">' + icon('edit') + ' Edit</button>'
     + '<button class="btn outlined" type="button" data-act="gpx">' + icon('download') + ' GPX</button>'
     + '<button class="btn text" type="button" data-act="del">' + icon('trash') + ' Delete</button></div>';
@@ -2775,6 +2814,13 @@ function setupPWA(){
   };
   navigator.serviceWorker.register('sw.js').then(reg => {
     if(reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+    const b = $('updBtn'); b.hidden = false;
+    b.addEventListener('click', () => {
+      if(reg.waiting) return offer(reg.waiting);
+      snack('Checking for updates…');
+      reg.update().then(() => { if(!reg.installing && !reg.waiting) snack('You’re on the latest version.'); })   // a new one shows the Reload notice itself
+        .catch(() => snack('Couldn’t check for updates. Are you online?'));
+    });
     reg.addEventListener('updatefound', () => {
       const w = reg.installing;
       if(w) w.addEventListener('statechange', () => { if(w.state === 'installed' && navigator.serviceWorker.controller) offer(w); });

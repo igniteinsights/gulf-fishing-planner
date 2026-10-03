@@ -156,6 +156,7 @@ main{ padding:4px 16px 112px; max-width:1440px; margin:0 auto; }
 .ring-of{ font-size:.875rem; color:var(--ink-2); }
 .verdict{ font-size:1.5rem; font-weight:500; margin:6px 0 4px; }
 .verdict-why{ color:var(--ink-2); margin:0 auto 12px; }
+.pressure-line{ margin:-6px auto 12px; }
 .legend{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; text-align:left; }
 .legend-item{ display:flex; flex-direction:column; gap:2px; font-size:.8125rem; color:var(--ink-2); min-width:0; }
 .legend-item .lbl{ display:flex; align-items:center; gap:6px; }
@@ -410,6 +411,21 @@ body.on-map footer{ display:none; }
 .sheet::before{ content:""; display:block; width:32px; height:4px; border-radius:2px; background:var(--outline-strong); margin:0 auto 8px; }
 .sheet[hidden]{ display:none; }
 .ref-mk{ background:var(--surface-1); color:var(--ink-2); border-radius:8px; padding:2px 8px; font-size:.75rem; font-weight:500; box-shadow:var(--elev-1); pointer-events:none; white-space:nowrap; }
+.map-track{ position:absolute; right:10px; bottom:132px; z-index:2; width:44px; height:44px; border-radius:50%; border:0; background:var(--surface-1); color:var(--ink-2); box-shadow:var(--elev-1); display:grid; place-items:center; cursor:pointer; }
+.map-track[aria-pressed="true"]{ color:var(--primary); box-shadow:0 0 0 2px var(--primary); }
+.me-dot{ width:16px; height:16px; border-radius:50%; background:#1B6FA8; border:3px solid #fff; box-shadow:0 0 0 6px rgba(27,111,168,.25); }
+.guide-bar{ position:absolute; left:12px; right:12px; top:112px; z-index:3; background:var(--ink); color:var(--surface-1); border-radius:var(--radius-m); padding:10px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; box-shadow:var(--elev-1); flex-wrap:nowrap; }
+.guide-bar .small{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.guide-bar[hidden]{ display:none; }
+.guide-bar b{ font-size:1.25rem; } .guide-bar .btn.text{ color:var(--primary-container); margin-left:auto; }
+.dist-btn{ border:0; background:none; padding:0; font:inherit; font-size:.875rem; color:var(--primary); font-weight:500; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; }
+.dist-btn[hidden]{ display:none; }
+.row-dist{ white-space:nowrap; }
+.off-row{ display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--outline); }
+.off-row:last-child{ border-bottom:0; }
+.off-main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.off-sub{ margin:12px 0 0; }
+@media (min-width:900px){ .map-track{ right:412px; } .guide-bar{ right:412px; top:68px; } }
 .spot-dot.no-take{ background:var(--bad-container); border-color:var(--bad); }
 .pop-warn{ display:inline-flex; align-items:center; gap:6px; color:var(--bad); font-size:.8125rem; font-weight:500; }
 .pop-warn .icon{ width:16px; height:16px; }
@@ -425,6 +441,11 @@ body.on-map footer{ display:none; }
 .field .lbl{ font-size:.8125rem; color:var(--ink-2); }
 .pin-form{ display:grid; gap:14px; }
 .pin-form textarea{ min-height:72px; }
+.rule-row{ display:flex; align-items:center; gap:10px; margin-top:8px; font-size:.875rem; color:var(--ink-2); }
+.rule-row input{ width:90px; }
+.rule-tide{ margin:8px 0 0; }
+.bs-out{ color:var(--warn); font-weight:500; }
+.spot-rules{ margin:2px 0 0; }
 .pin-actions{ display:flex; justify-content:flex-end; gap:8px; }
 .pin-mk{ border:0; padding:0; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; filter:drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
 .pin-score{ position:relative; width:40px; height:40px; border-radius:50%; background:var(--surface-1); display:grid; place-items:center; color:var(--primary); }
@@ -439,6 +460,7 @@ body.on-map footer{ display:none; }
 .sheet-head{ display:flex; align-items:flex-start; gap:8px; }
 .sheet-title-wrap{ flex:1; min-width:0; }
 .sheet-title{ font-size:1.25rem; overflow-wrap:anywhere; }
+.sheet-title:focus{ outline:none; }   /* focused for screen readers, not clickable */
 .spot-notes{ overflow-wrap:anywhere; white-space:pre-line; }
 .spot-actions{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 16px; }
 .spot-row{ width:100%; border:0; text-align:left; cursor:pointer; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-s); background:var(--surface-2); color:var(--ink); font:inherit; }
@@ -453,6 +475,17 @@ body.on-map footer{ display:none; }
 .spot-week .day-btn[aria-pressed="true"]{ background:var(--secondary-container); color:var(--on-secondary-container); }
 .spot-week .day-btn[aria-pressed="true"] .n{ color:inherit; }
 .sub-h{ font-size:1rem; font-weight:500; margin:18px 0 6px; }
+.hstrip{ display:grid; grid-template-columns:repeat(16, minmax(0,1fr)); gap:2px; height:104px; align-items:end; }
+.hs-col{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; border-radius:6px; padding:2px 0; font-size:.625rem; color:var(--ink-2); min-width:0; gap:2px; }
+.hs-col.bite{ background:var(--window); }
+.hs-col.best{ box-shadow:inset 0 0 0 2px var(--good); }
+.hs-col.out{ opacity:.35; }
+.hs-bar{ width:70%; max-width:14px; border-radius:3px 3px 1px 1px; min-height:3px; flex:none; max-height:56px; }
+.hs-bar.wind-ok{ background:var(--good); } .hs-bar.wind-warn{ background:#D08A00; } .hs-bar.wind-bad{ background:var(--bad); }
+.hs-kt{ font-weight:600; color:var(--ink); } .hs-tide{ line-height:1; } .hs-h{ height:12px; white-space:nowrap; }
+.hs-line{ margin:6px 0 0; font-weight:500; } .hs-key{ margin:2px 0 0; }
+.cur-arrow{ display:inline-grid; vertical-align:-4px; margin-right:4px; }
+.cur-arrow .icon{ width:16px; height:16px; transform:rotate(-45deg); color:var(--primary); }   /* i-nav points NE */
 .lf{ list-style:none; margin:0; padding:0; display:grid; gap:6px; }
 .lf-row{ width:100%; border:0; background:var(--surface-2); color:var(--ink); font:inherit; text-align:left; cursor:pointer; display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; align-items:center; padding:8px 10px 8px 8px; border-radius:var(--radius-s); }
 .lf-row:hover{ background:var(--surface-3); }
@@ -604,6 +637,8 @@ body.on-map footer{ display:none; }
               <button class="btn tonal" id="spotsBtn" type="button"><svg class="icon"><use href="#i-list"/></svg>My spots</button>
             </div>
           </div>
+          <button class="map-track" id="trackBtn" type="button" aria-pressed="false" aria-label="Show my position"><svg class="icon"><use href="#i-locate"/></svg></button>
+          <div class="guide-bar" id="guideBar" hidden></div>
           <p class="map-hint" id="mapHint">Tap the map where you fish to save a spot.</p>
           <aside class="sheet" id="sheet" aria-label="Spot details" hidden></aside>
         </div>
@@ -670,9 +705,10 @@ body.on-map footer{ display:none; }
             <li>Big game: <a href="https://www.fishing.net.nz/fishing-advice/gamefishing-species-guide/" target="_blank" rel="noopener">fishing.net.nz gamefish guide</a>; <a href="https://www.nzsportfishing.co.nz/fisheries/species/marlin/" target="_blank" rel="noopener">NZ Sport Fishing Council</a>; <a href="https://www.fishing.net.nz/fishing-advice/general-articles/how-does-el-nino-affect-fishing-in-new-zealand/" target="_blank" rel="noopener">El Niño and NZ fishing</a>; <a href="https://niwa.co.nz/climate-and-weather/seasonal-climate-outlook/seasonal-climate-outlook-september-november-2026" target="_blank" rel="noopener">NIWA outlook Sep–Nov 2026</a>.</li>
             <li>Map: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> (BSD-3); base map <a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>; satellite imagery © Esri, Maxar, Earthstar Geographics. Not for navigation.</li>
             <li>Fish photos: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>; each photographer and licence is credited under the photo.</li>
-            <li>Your spots are stored only in this browser on this device.</li>
+            <li>Your spots, and any offline map you save, are stored only in this browser on this device. Offline map tiles © OpenFreeMap, OpenMapTiles, OpenStreetMap contributors.</li>
+            <li>Pressure, ocean current: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (currents from Météo-France SMOC). Distances and bearings are from your phone’s GPS. Not for navigation.</li>
           </ul>
-          <p>Version 5.1 · built 3 October 2026. <button class="btn text" type="button" id="updBtn" hidden>Check for updates</button></p>
+          <p>Version 5.2 · built 3 October 2026. <button class="btn text" type="button" id="updBtn" hidden>Check for updates</button></p>
         </details>
       </footer>
     </main>
@@ -691,6 +727,11 @@ body.on-map footer{ display:none; }
       <div class="field"><label for="pinName">Name</label><input type="text" id="pinName" maxlength="60" autocomplete="off" placeholder="e.g. Kawau north reef"></div>
       <div class="field"><span class="lbl" id="pinHabLbl">What’s the bottom like? Tick all that apply.</span><div class="chips" id="pinHabitats" role="group" aria-labelledby="pinHabLbl"></div></div>
       <div class="field"><label for="pinDepth">Depth in metres (optional)</label><input type="number" id="pinDepth" min="1" max="1999" inputmode="numeric"></div>
+      <div class="field"><span class="lbl">Fishable when (optional)</span>
+        <div class="chips" id="pinDirs" role="group" aria-label="Wind directions that suit this spot"></div>
+        <div class="rule-row"><label for="pinMaxKt">Max wind (kt)</label><input type="number" id="pinMaxKt" min="1" max="60" inputmode="numeric"></div>
+        <div class="seg rule-tide" id="pinTide" role="group" aria-label="Tide"><button type="button" data-tide="any">Any tide</button><button type="button" data-tide="in">Incoming</button><button type="button" data-tide="out">Outgoing</button></div>
+      </div>
       <div class="field"><label for="pinNotes">Notes (optional)</label><textarea id="pinNotes" maxlength="500" rows="3"></textarea></div>
       <div class="pin-actions"><button class="btn text" type="button" id="pinCancel">Cancel</button><button class="btn filled" type="submit">Save spot</button></div>
     </div>
@@ -773,6 +814,11 @@ function normalizePin(raw){
     habitats: [...new Set((Array.isArray(raw.habitats) ? raw.habitats : []).filter(h => known.includes(h)))],
     depth: Number.isFinite(depth) && depth > 0 && depth < 2000 ? Math.round(depth) : null,
     notes: String(raw.notes || '').slice(0, 500),
+    rules: (r => ({
+      dirs: [...new Set((Array.isArray(r.dirs) ? r.dirs : []).filter(d => DIR8.includes(d)))],
+      maxKt: r.maxKt !== '' && r.maxKt != null && Number.isFinite(+r.maxKt) && +r.maxKt > 0 ? Math.round(+r.maxKt) : null,
+      tide: ['in', 'out'].includes(r.tide) ? r.tide : 'any'
+    }))(raw.rules || {}),
     created: raw.created || new Date().toISOString()
   };
 }
@@ -868,6 +914,113 @@ function sstFromMarine(marine, dateStr){
   const v = [];
   h.time.forEach((t, i) => { const hr = +t.slice(11, 13), x = h.sea_surface_temperature[i]; if(t.slice(0, 10) === dateStr && hr >= 6 && hr <= 18 && x != null) v.push(x); });
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
+
+/* ---- On the water ---- */
+function bearingDeg(lat1, lon1, lat2, lon2){
+  const r = Math.PI / 180, y = Math.sin((lon2 - lon1) * r) * Math.cos(lat2 * r);
+  const x = Math.cos(lat1 * r) * Math.sin(lat2 * r) - Math.sin(lat1 * r) * Math.cos(lat2 * r) * Math.cos((lon2 - lon1) * r);
+  return (Math.atan2(y, x) / r + 360) % 360;
+}
+function fmtDist(km, unit){
+  if(km < 1) return Math.round(km * 100) * 10 + ' m';
+  const v = unit === 'km' ? km : km / 1.852;
+  return (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ' + (unit === 'km' ? 'km' : 'nm');
+}
+/* Ocean current nearest to a minute of the day; Open-Meteo gives km/h and the direction it flows towards. */
+function currentAt(marine, dateStr, minute){
+  const h = marine && marine.hourly;
+  if(!h || !h.time || !h.ocean_current_velocity) return null;
+  let best = -1, bd = Infinity;
+  h.time.forEach((t, i) => { if(t.slice(0, 10) !== dateStr) return; const d = Math.abs(+t.slice(11, 13) * 60 - minute); if(d < bd){ bd = d; best = i; } });
+  if(best < 0 || h.ocean_current_velocity[best] == null) return null;
+  return { kt:Math.round(h.ocean_current_velocity[best] / 1.852 * 100) / 100, dir:h.ocean_current_direction ? h.ocean_current_direction[best] : null };
+}
+function pressureTrend(weather, dateStr){
+  const h = weather && weather.hourly;
+  if(!h || !h.time || !h.pressure_msl) return null;
+  const pts = h.time.map((t, i) => ({ d:t.slice(0, 10), hr:+t.slice(11, 13), p:h.pressure_msl[i] })).filter(x => x.d === dateStr && x.p != null && x.hr >= 6 && x.hr <= 18);
+  if(pts.length < 2) return null;
+  const from = pts[0].p, to = pts[pts.length - 1].p;
+  return { from, to, delta:Math.round((to - from) * 10) / 10 };
+}
+function pressureNudge(delta){
+  if(delta == null || Number.isNaN(delta)) return 0;
+  return delta <= -3 ? 5 : delta <= -1 ? 2 : delta >= 3 ? -5 : delta >= 1 ? -2 : 0;
+}
+function nudgeScore(total, nudge){ return Math.max(0, Math.min(100, Math.round(total + nudge))); }
+const DIR8 = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+/* A spot's own rules against a day or an hour. Unknown inputs never fail a rule. */
+function ruleCheck(rules, o){
+  const reasons = [], r = rules || {};
+  if(r.dirs && r.dirs.length && o.windDir != null){ const d = DIR8[Math.round(o.windDir / 45) % 8]; if(!r.dirs.includes(d)) reasons.push(d + ' wind'); }
+  if(r.maxKt != null && o.windKt != null && o.windKt > r.maxKt) reasons.push(Math.round(o.windKt) + ' kt');
+  if(r.tide && r.tide !== 'any' && o.tideRising != null && (r.tide === 'in') !== o.tideRising) reasons.push(o.tideRising ? 'incoming tide' : 'outgoing tide');
+  return { ok:!reasons.length, reasons };
+}
+function applyRules(total, check){ return check && !check.ok ? Math.round(total / 2) : total; }
+function hourScore(kt, bite01, flow01){
+  const w = kt == null ? 0.5 : clamp01((22 - kt) / 14);
+  return Math.round((0.5 * w + 0.3 * clamp01(bite01 || 0) + 0.2 * clamp01(flow01 || 0)) * 1000) / 1000;
+}
+/* Best two consecutive hours that pass the rules. */
+function bestHours(hours){
+  let best = null;
+  for(let i = 0; i + 1 < hours.length; i++){
+    const a = hours[i], b = hours[i + 1];
+    if(!a.ok || !b.ok || b.h !== a.h + 1) continue;
+    const s = Math.round((a.score + b.score) / 2 * 1000) / 1000;
+    if(!best || s > best.score) best = { start:a.h, end:a.h + 2, score:s };
+  }
+  return best;
+}
+/* ---- Offline map tiles ---- */
+function tileRange(bbox, z){
+  const [s, w, n, e] = bbox, x = lon => Math.floor((lon + 180) / 360 * 2 ** z);
+  const y = lat => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z); };
+  return { x0:x(w), x1:x(e), y0:y(n), y1:y(s) };
+}
+function regionTileUrls(bbox, zMin, zMax, template){
+  const out = [];
+  for(let z = zMin; z <= zMax; z++){
+    const t = tileRange(bbox, z);
+    for(let xx = t.x0; xx <= t.x1; xx++) for(let yy = t.y0; yy <= t.y1; yy++) out.push(template.replace('{z}', z).replace('{x}', xx).replace('{y}', yy));
+  }
+  return out;
+}
+/* Saved tiles from an older OpenFreeMap tile version (any zoom); unversioned files are never touched. */
+function outdatedTiles(urls, currentTemplate){
+  if(!currentTemplate) return [];
+  const cur = currentTemplate.replace(/\{z\}.*$/, ''), m = /^(.*\/)[^/]+\/$/.exec(cur);
+  if(!m) return [];
+  return urls.filter(u => u.startsWith(m[1]) && !u.startsWith(cur) && /\/\d+\/\d+\/\d+\.pbf$/.test(u));
+}
+/* Styles, the TileJSON and sprite JSON say which tile version to use: always re-fetch them, keep one copy. */
+function isMetaUrl(u){ return /\/styles\/[^/]+$/.test(u) || /\/planet$/.test(u) || /\.json$/.test(u); }
+/* Only a refused permission ends tracking; a slow or missing fix (cold GPS at sea) just means keep waiting. */
+function geoAction(err){ return err && err.code === 1 ? 'stop' : 'wait'; }
+function fmtKt(kt){ return kt == null || Number.isNaN(kt) ? '—' : String(Math.round(kt)); }
+/* Box (S, W, N, E) reaching km from a point in every direction. */
+function spotBBox(lat, lon, km){
+  const dLat = km / 111.32, dLon = km / (111.32 * Math.cos(lat * Math.PI / 180));
+  return [lat - dLat, lon - dLon, lat + dLat, lon + dLon];
+}
+/* Detail tiles around every spot, each URL once (nearby spots share tiles). */
+function spotTileUrls(pins, km, zMin, zMax, template){
+  const set = new Set();
+  pins.forEach(p => regionTileUrls(spotBBox(p.lat, p.lon, km), zMin, zMax, template).forEach(u => set.add(u)));
+  return [...set];
+}
+/* Cached detail tiles (z ≥ minZ) that nothing wants any more; overview tiles, fonts and styles are left alone. */
+function staleTiles(cachedUrls, wanted, minZ){
+  return cachedUrls.filter(u => { const m = /\/(\d+)\/\d+\/\d+\.(pbf|png)$/.exec(u); return m && +m[1] >= minZ && !wanted.has(u); });
+}
+function glyphUrls(style, template, ranges){
+  const stacks = new Set();
+  (style.layers || []).forEach(l => { const f = l.layout && l.layout['text-font']; if(Array.isArray(f) && f.every(x => typeof x === 'string')) stacks.add(f.join(',')); });
+  const out = [];
+  stacks.forEach(s => ranges.forEach(r => out.push(template.replace('{fontstack}', encodeURIComponent(s)).replace('{range}', r))));
+  return out;
 }
 </script>
 <script id="species-data">
@@ -1454,8 +1607,8 @@ function scoreDay(o){
   let got = 0, max = 0;
   for(const k of Object.keys(parts)){ if(parts[k] != null){ got += parts[k]; max += WEIGHTS[k]; } }
   const total = Math.round(got / max * 100);
-  const verdict = VERDICTS.find(v => total >= v[0])[1];
-  return { total, parts, verdict, hasForecast: parts.wind != null };
+  const nudge = pressureNudge(o.pressure && o.pressure.delta), total2 = nudgeScore(total, nudge);   // falling pressure helps, rising hurts
+  return { total:total2, parts, verdict:VERDICTS.find(v => total2 >= v[0])[1], hasForecast: parts.wind != null, pressure:o.pressure ? Object.assign({ nudge }, o.pressure) : null };
 }
 
 const AI_SCHEMA = '{"asAt":"YYYY-MM-DD","source":"name of the AI you are","reports":[{"date":"YYYY-MM-DD","area":"e.g. Outer Hauraki Gulf","type":"report | forum | club | news","title":"short headline","summary":"2-4 sentences: where, depth, method, bait or lure, what is biting and sizes","species":["snapper","kingfish"],"author":"writer or charter, if given","url":"https://link-to-the-page"}],"rules":[{"date":"YYYY-MM-DD","title":"short headline","summary":"what changed and when it starts","url":"https://link"}],"sst":"e.g. north-east North Island +0.5 °C above average (Earth Sciences NZ, Sep 2026)","notes":"optional"}';
@@ -1601,8 +1754,9 @@ function dayContext(dateStr, at){
 
 /* Daylight (06:00–18:00) summary of the Open-Meteo hourly series for one date. */
 function daySummary(data, dateStr){
-  const out = { dateStr, windKt:null, gustKt:null, windDir:null, waveM:null, swellM:null, swellP:null, hours:[] };
+  const out = { dateStr, windKt:null, gustKt:null, windDir:null, waveM:null, swellM:null, swellP:null, hours:[], pressure:null };
   if(!data) return out;
+  out.pressure = pressureTrend(data.weather, dateStr);
   const w = data.weather.hourly, m = data.marine && data.marine.hourly;
   const kts = [], gusts = [];
   w.time.forEach((t, i) => {
@@ -1728,6 +1882,11 @@ function explain(score, sum, ctx){
   return why + ' ' + (bestPart[2] > 0.7 ? plus : '');
 }
 
+function pressureLine(p){
+  if(!p) return '';
+  const word = p.delta <= -1 ? 'falling' : p.delta >= 1 ? 'rising' : 'steady';
+  return 'Pressure ' + word + ' ' + Math.round(p.from) + ' → ' + Math.round(p.to) + ' hPa' + (p.nudge ? ' (' + (p.nudge > 0 ? '+' : '') + p.nudge + ')' : '');
+}
 function heroHTML(dateStr, score, sum, ctx, opts){
   const legend = RING_ORDER.map(([k, l, col]) => {
     let v;
@@ -1747,6 +1906,7 @@ function heroHTML(dateStr, score, sum, ctx, opts){
     + '<div class="ring-center"><div class="ring-score">' + score.total + '</div><div class="ring-of">Fishability' + (!score.hasForecast ? ' · moon &amp; tide only' : score.parts.sea == null ? ' · no sea forecast' : '') + '</div></div></div>'
     + '<div class="verdict">' + score.verdict + '</div>'
     + '<p class="verdict-why">' + esc(explain(score, sum, ctx)) + '</p>'
+    + (score.pressure ? '<p class="xsmall muted pressure-line">' + esc(pressureLine(score.pressure)) + '</p>' : '')
     + '<div class="legend">' + legend + '</div>' + best + (opts.week || '');
 }
 
@@ -1844,11 +2004,11 @@ function windowsMoonSplit(dateStr, ctx){
    ========================================================================= */
 function renderToday(){
   const date = todayNZ(), ctx = dayContext(date), central = LIVE.central && !LIVE.central.error ? LIVE.central : null;
-  const sum = daySummary(central, date), score = scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01 });
+  const sum = daySummary(central, date), score = scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01, pressure:sum.pressure });
   let week = '<div class="week" aria-label="Next seven days">';
   for(let i = 0; i < 7; i++){
     const ds = addDaysStr(date, i), c = i ? dayContext(ds) : ctx, s = daySummary(central, ds);
-    const sc = scoreDay({ windKt:s.windKt, gustKt:s.gustKt, waveM:s.waveM, tideFlow01:c.tideFlow01, bite01:c.bite01 });
+    const sc = scoreDay({ windKt:s.windKt, gustKt:s.gustKt, waveM:s.waveM, tideFlow01:c.tideFlow01, bite01:c.bite01, pressure:s.pressure });
     week += '<button class="day-btn" data-date="' + ds + '" aria-label="' + dateLabel(ds) + ': ' + sc.total + ', ' + sc.verdict + '. Open in planner">'
       + '<span>' + (i ? dateLabel(ds, { day:undefined, month:undefined }) : 'Today') + '</span>' + miniRing(sc.total, sc.hasForecast) + '<span class="n">' + sc.total + '</span></button>';
   }
@@ -1939,7 +2099,7 @@ function renderBriefing(){
   $('dateChip').classList.toggle('on', !preset);
   const ctx = dayContext(dateStr), central = LIVE.central && !LIVE.central.error ? LIVE.central : null;
   const sum = diff >= 0 && diff <= 15 ? daySummary(central, dateStr) : daySummary(null, dateStr);
-  const score = scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01 });
+  const score = scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01, pressure:sum.pressure });
   const m = monthOf(dateStr), g = MONTHLY_GUIDE[m];
 
   let fc;
@@ -2346,7 +2506,7 @@ function openHelp(which, section){
    LIVE DATA + REFRESH
    ========================================================================= */
 async function fetchPoint(p){
-  const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.lat + '&longitude=' + p.lon + '&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=Pacific%2FAuckland&forecast_days=16';
+  const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.lat + '&longitude=' + p.lon + '&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl&timezone=Pacific%2FAuckland&forecast_days=16';
   const marineUrl = 'https://marine-api.open-meteo.com/v1/marine?latitude=' + p.lat + '&longitude=' + p.lon + '&hourly=wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,sea_surface_temperature,ocean_current_velocity,ocean_current_direction&timezone=Pacific%2FAuckland&forecast_days=8';
   const get = u => fetch(u, { cache:'no-store', signal:AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined }).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); });
   const [weather, marine] = await Promise.all([ get(weatherUrl), get(marineUrl).catch(() => null) ]);
@@ -2431,6 +2591,7 @@ async function initMap(){
     MAP = new maplibregl.Map({ container:'map', style:styleFor(MAP_BASE), center:GULF_VIEW.center, zoom:GULF_VIEW.zoom, attributionControl:{ compact:true } });
   }catch(e){ MAP = null; throw new Error('webgl'); }
   MAP.addControl(new maplibregl.NavigationControl({ showCompass:false }), 'bottom-right');
+  MAP.on('style.load', () => { if(GUIDE) drawGuide(true); });   // setStyle (theme / satellite) drops the guide line
   MAP.on('styleimagemissing', e => { if(!MAP.hasImage(e.id)) MAP.addImage(e.id, { width:1, height:1, data:new Uint8Array(4) }); });   // OpenFreeMap dark lacks some POI icons
   MAP.on('click', e => {
     if(e.originalEvent && e.originalEvent.target.closest('.maplibregl-marker, .maplibregl-popup')) return;
@@ -2479,16 +2640,60 @@ function drawStaticMarkers(){
     new maplibregl.Marker({ element:el }).setLngLat([s[1], s[0]]).addTo(MAP);
   });
 }
+/* ---- Where am I / take me back ---- */
+let POS = null, WATCH = null, ME = null, GUIDE = null, RESUME_TRACK = false, UNITS = LS.get('ghfp.units') === 'km' ? 'km' : 'nm';
+const fromYou = p => POS ? fmtDist(distKm(POS.lat, POS.lon, p.lat, p.lon), UNITS) + ' · ' + String(Math.round(bearingDeg(POS.lat, POS.lon, p.lat, p.lon)) % 360).padStart(3, '0') + '°T' : null;
+function toggleUnits(){ UNITS = UNITS === 'nm' ? 'km' : 'nm'; LS.set('ghfp.units', UNITS); onPosition(); }
+function setTracking(on){
+  const btn = $('trackBtn'); if(btn) btn.setAttribute('aria-pressed', String(on));
+  if(!on){ if(WATCH != null && navigator.geolocation) navigator.geolocation.clearWatch(WATCH); WATCH = null; return; }
+  if(!navigator.geolocation){ snack('Location isn’t available on this device.'); return setTracking(false); }
+  if(WATCH != null) return;
+  WATCH = navigator.geolocation.watchPosition(pos => { POS = { lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy }; onPosition(); },
+    err => { if(geoAction(err) === 'stop'){ snack('Location permission is off for this app.'); setTracking(false); } else if(GUIDE) drawGuide(); },   // no fix yet: keep trying
+    { enableHighAccuracy:true, maximumAge:5000, timeout:20000 });
+}
+function onPosition(){
+  if(!POS) return;
+  if(MAP){ if(!ME){ const el = document.createElement('div'); el.className = 'me-dot'; el.setAttribute('aria-label', 'Your position'); ME = new maplibregl.Marker({ element:el }).setLngLat([POS.lon, POS.lat]).addTo(MAP); } else ME.setLngLat([POS.lon, POS.lat]); }
+  const d = $('spotDist'), sp = SEL_PIN && loadPins().find(x => x.id === SEL_PIN);
+  if(d && sp){ d.textContent = 'From you: ' + fromYou(sp); d.hidden = false; }
+  document.querySelectorAll('.spot-row[data-id]').forEach(b => { const p = loadPins().find(x => x.id === b.dataset.id), el = b.querySelector('.row-dist'); if(p && el) el.textContent = fromYou(p); });
+  drawGuide();
+}
+function startGuide(id){ GUIDE = id; setTracking(true); drawGuide(); if(!isWide()) $('sheet').hidden = true; }   // phones: clear the map; the banner carries distance and bearing
+function stopGuide(){ GUIDE = null; const bar = $('guideBar'); if(bar){ bar.hidden = true; bar.innerHTML = ''; } if(MAP && MAP.getSource('guide')) MAP.getSource('guide').setData({ type:'FeatureCollection', features:[] }); }
+function drawGuide(styleJustLoaded){
+  const p = GUIDE && loadPins().find(x => x.id === GUIDE); if(!p){ if(GUIDE) stopGuide(); return; }
+  const bar = $('guideBar'); bar.hidden = false;
+  if(!$('guideStop')){   // built once so the Stop button keeps focus across GPS fixes
+    bar.innerHTML = '<b id="guideDist" aria-live="polite"></b><span class="small" id="guideTo"></span><button class="btn text" type="button" id="guideStop">Stop</button>';
+    $('guideStop').addEventListener('click', stopGuide);
+  }
+  $('guideDist').textContent = POS ? fromYou(p) : 'Finding your position…';
+  $('guideTo').textContent = POS ? 'to ' + p.name + (POS.acc ? ' · ±' + Math.round(POS.acc) + ' m' : '') : '';
+  if(!MAP || !POS || !(styleJustLoaded || MAP.isStyleLoaded())) return;   // on style.load isStyleLoaded() can still be false
+  const data = { type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates:[[POS.lon, POS.lat], [p.lon, p.lat]] } };
+  if(MAP.getSource('guide')) MAP.getSource('guide').setData(data);
+  else { MAP.addSource('guide', { type:'geojson', data }); MAP.addLayer({ id:'guide', type:'line', source:'guide', paint:{ 'line-color':'#1B6FA8', 'line-width':3, 'line-dasharray':[2, 1.5] } }); }
+}
 let PIN_EDIT = null, SEL_PIN = null;
 const isWide = () => matchMedia('(min-width:900px)').matches;
 function setupMapUI(){
   document.querySelectorAll('.map-base button').forEach(b => b.addEventListener('click', () => setBase(b.dataset.base)));
+  $('pinDirs').addEventListener('click', e => { const b = e.target.closest('.chip'); if(b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); });
+  $('pinTide').addEventListener('click', e => { const b = e.target.closest('button'); if(b) $('pinTide').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
   $('pinHabitats').addEventListener('click', e => { const b = e.target.closest('.chip'); if(b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); });
   $('pinForm').addEventListener('submit', submitPinForm);
   $('pinClose').addEventListener('click', () => $('pinDlg').close());
   $('pinCancel').addEventListener('click', () => $('pinDlg').close());
   $('locateBtn').addEventListener('click', dropAtMyLocation);
   $('spotsBtn').addEventListener('click', openSpotList);
+  $('trackBtn').addEventListener('click', () => setTracking(WATCH == null));
+  document.addEventListener('visibilitychange', () => {   // save battery: no GPS while the app is hidden
+    if(document.visibilityState === 'hidden'){ if(WATCH != null){ setTracking(false); RESUME_TRACK = true; } }
+    else if(RESUME_TRACK && !$('tab-map').hidden){ RESUME_TRACK = false; setTracking(true); }
+  });
   $('regionSel').addEventListener('change', e => { const v = REGION_VIEWS[e.target.value]; if(MAP) MAP.easeTo({ center:v.center, zoom:v.zoom, duration:reducedMotion() ? 0 : 800 }); });
 }
 
@@ -2562,11 +2767,15 @@ let SPOT_DAY = 0;   // 0 = today … 6
 function spotScore(p, live, dateStr){
   const tp = tidePortFor(p.lat, p.lon, dateStr);
   const sum = daySummary(live && !live.error ? live : null, dateStr), ctx = dayContext(dateStr, { lat:p.lat, lon:p.lon, port:tp.port });
-  return { sum, ctx, tp, score:scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01 }) };
+  let score = scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01, pressure:sum.pressure });
+  const rules = ruleCheck(p.rules, { windKt:sum.windKt, windDir:sum.windDir, tideRising:ctx.best && ctx.best.st ? ctx.best.st.rising : null });
+  if(!rules.ok){ const t = applyRules(score.total, rules); score = Object.assign({}, score, { total:t, verdict:VERDICTS.find(v => t >= v[0])[1] }); }   // your rules: halve it
+  return { sum, ctx, tp, score, rules };
 }
 function openSpot(id, fly, day){
   const p = loadPins().find(x => x.id === id); if(!p) return openSpotList();
   clearHighlight();
+  if(GUIDE && GUIDE !== id) stopGuide();
   if(day != null) SPOT_DAY = Math.max(0, Math.min(6, day)); else if(SEL_PIN !== id) SPOT_DAY = 0;
   SEL_PIN = id;
   Object.entries(PIN_MARKERS).forEach(([k, m]) => m.getElement().classList.toggle('sel', k === id));
@@ -2586,9 +2795,33 @@ function renderSpotBody(p, fetched){
   if(!fetched && !pinTried(p.id)) getPinLive(p).then(() => { renderSpotBody(p, true); updatePinBadge(p); });
   const w = ensureNearArea(p); if(w) w.then(() => renderSpotBody(p, true));   // runs again once the pin's own data lands
 }
+/* Hour by hour for one spot and day: wind bars, tide arrows, bite windows, your rules, and the best two hours. */
+function hourStripHTML(p, sum, ctx, tp, dateStr){
+  if(!sum.hours.length) return '';
+  const hrs = sum.hours.map(x => {
+    const m = x.h * 60 + 30, st = tideStateAt(dateStr, m, tp.port);
+    const slack = !!st && (st.sinceChange < 30 || st.toChange < 30);
+    const win = ctx.wins.find(w => w.daylight && m >= w.s && m <= w.e);
+    const rulesOk = ruleCheck(p.rules, { windKt:x.kt, windDir:x.dir, tideRising:st ? st.rising : null }).ok;
+    const daylight = m >= ctx.rise && m <= ctx.set;
+    return { h:x.h, kt:x.kt, dir:x.dir, st, slack, win, rulesOk, ok:rulesOk && daylight,
+      score:hourScore(x.kt, win ? win.q : 0, st ? Math.sin(Math.PI * st.frac) : 0.5) };
+  });
+  const best = bestHours(hrs), ampm = h => (h % 12 || 12) + (h < 12 ? 'am' : 'pm');
+  const tideTxt = x => !x.st ? '' : x.slack ? 'slack' : x.st.rising ? 'incoming' : 'outgoing';
+  const cols = hrs.map(x => '<div class="hs-col' + (x.win ? ' bite' : '') + (x.rulesOk ? '' : ' out') + (best && x.h >= best.start && x.h < best.end ? ' best' : '') + '" title="'
+      + ampm(x.h) + ': ' + fmtKt(x.kt) + ' kt ' + windDirLabel(x.dir) + (x.st ? ', ' + tideTxt(x) : '') + (x.win ? ', ' + x.win.type + ' bite' : '') + '">'
+    + '<span class="hs-kt">' + fmtKt(x.kt) + '</span><span class="hs-bar ' + windClass(x.kt) + '" style="height:' + (x.kt == null ? 8 : Math.max(8, Math.min(100, x.kt / 25 * 100))) + '%"></span>'
+    + '<span class="hs-tide">' + (!x.st ? '' : x.slack ? '=' : x.st.rising ? '↑' : '↓') + '</span><span class="hs-h">' + (x.h % 3 === 2 ? ampm(x.h) : '') + '</span></div>').join('');
+  const b = best && hrs.find(x => x.h === best.start);
+  const line = best ? 'Best: ' + ampm(best.start) + '–' + ampm(best.end) + ' · ' + fmtKt(b.kt) + ' kt ' + windDirLabel(b.dir) + (b.st ? ' · ' + tideTxt(b) : '') + (b.win ? ' · ' + b.win.type + ' bite' : '')
+    : (hrs.some(x => !x.rulesOk) ? 'No daylight hours inside your rules' : 'No clear best hours');
+  return '<h3 class="sub-h">Hour by hour</h3><div class="hstrip" role="img" aria-label="' + esc(line) + '">' + cols + '</div>'
+    + '<p class="small hs-line">' + esc(line) + '</p><p class="xsmall muted hs-key">Bars: wind (kt) · ↑ incoming ↓ outgoing = slack · shaded: bite window' + (hrs.some(x => !x.rulesOk) ? ' · faded: outside your rules' : '') + '</p>';
+}
 function spotBodyHTML(p, live){
   const today = todayNZ(), days = Array.from({ length:7 }, (_, i) => addDaysStr(today, i)), dateStr = days[SPOT_DAY];
-  const { sum, ctx, score, tp } = spotScore(p, live, dateStr), sst = pinSST(live, p, dateStr);
+  const { sum, ctx, score, tp, rules } = spotScore(p, live, dateStr), sst = pinSST(live, p, dateStr);
   const fish = likelyFor(p, monthOf(dateStr), sst.sst, SPECIES), region = regionFor(p.lat, p.lon);
   const ageMin = live.at ? Math.round((Date.now() - live.at) / 60000) : null;
   const tides = tidesFor(dateStr, tp.port);
@@ -2597,15 +2830,20 @@ function spotBodyHTML(p, live){
   return '<div class="spot-score"><div class="ring-wrap sm">' + ringSVG(score, 120, 12) + '<div class="ring-center"><div class="ring-score">' + score.total + '</div></div></div>'
       + '<div><div class="verdict">' + score.verdict + '</div><div class="small muted">' + dateLabel(dateStr) + (score.hasForecast ? '' : ' · tide and moon only') + '</div>'
       + (live.error ? '<div class="xsmall muted">Forecast unavailable</div>' : ageMin != null && ageMin > 60 ? '<div class="xsmall"><span class="chip-stale">Forecast ' + Math.round(ageMin / 60) + ' h old</span></div>' : '') + '</div></div>'
+    + (rules.ok ? '' : '<div class="note warn" style="margin-top:10px;">Outside your rules: ' + esc(rules.reasons.join(', ')) + '</div>')
     + '<div class="week spot-week" aria-label="Next seven days">' + days.map((d, i) => { const s = spotScore(p, live, d).score;
         return '<button type="button" class="day-btn" data-day="' + i + '" aria-pressed="' + (i === SPOT_DAY) + '" aria-label="' + dateLabel(d) + ': ' + s.total + ', ' + s.verdict + '"><span>' + (i ? wkday(d) : 'Today') + '</span>' + miniRing(s.total, s.hasForecast) + '<span class="n">' + s.total + '</span></button>'; }).join('') + '</div>'
     + '<h3 class="sub-h">Conditions, 6 am–6 pm</h3><div class="rows">'
       + row('Wind', sum.windKt == null ? '—' : '<span class="wind-tag ' + windClass(sum.windKt) + '">' + Math.round(sum.windKt) + ' kt ' + windDirLabel(sum.windDir) + (sum.gustKt != null ? ', gusts ' + Math.round(sum.gustKt) : '') + '</span>')
       + row('Sea', sum.waveM == null ? '—' : sum.waveM.toFixed(1) + ' m' + (sum.swellM != null ? ' · swell ' + sum.swellM.toFixed(1) + ' m' + (sum.swellP ? ' @ ' + Math.round(sum.swellP) + ' s' : '') : ''))
       + row('Water temp', sst.sst == null ? 'No water temp' : sst.sst.toFixed(1) + ' °C' + (sst.nearest ? ' <span class="muted small">(nearest open water: ' + esc(sst.nearest.name.split(' — ')[0]) + ')</span>' : ''))
+      + (c => row('Current at bite time', !c ? '—' : c.kt < 0.1 ? 'Slack' : '<span class="cur-arrow" style="transform:rotate(' + c.dir + 'deg)">' + icon('nav') + '</span>' + c.kt.toFixed(1) + ' kt toward ' + windDirLabel(c.dir)))
+        (currentAt(live && !live.error ? live.marine : null, dateStr, ctx.best ? Math.round(ctx.best.c) : 720))
       + row('Tides (' + TIDE_PORTS[tp.port].name + (tp.approx ? ', approx' : '') + ')', tides ? tides.map(t => (t.type === 'H' ? 'High ' : 'Low ') + fmtClock(t.min)).join(' · ') : '—')
+      + row('Pressure', score.pressure ? esc(pressureLine(score.pressure).replace('Pressure ', '')) : '—')
       + row('Best bite window', ctx.best ? fmtClock(ctx.best.s) + '–' + fmtClock(ctx.best.e) : '—')
     + '</div>'
+    + hourStripHTML(p, sum, ctx, tp, dateStr)
     + '<h3 class="sub-h">Likely fish</h3>'
     + (fish.length ? '<ul class="lf">' + fish.map(f => { const lim = limitsFor(f.species, region) || { mls:'–', bag:'–' };
         return '<li><button type="button" class="lf-row" data-sp="' + f.species.id + '">'
@@ -2655,6 +2893,169 @@ async function findSpecies(id){
   clearTimeout(findSpecies.t); findSpecies.t = setTimeout(clearHighlight, 15000);
 }
 function clearHighlight(){ Object.values(PIN_MARKERS).forEach(m => m.getElement().classList.remove('hl', 'dim')); }
+/* ---- Offline map (hosted app only) ----
+   "Around my spots" (default, automatic): overview of all regions (z6–11) + detail within 3 nm of each spot (z12–14).
+   "Full region" (optional): every tile in a region at full detail. */
+const OFFLINE_REGIONS = {
+  gulf:{ name:'Hauraki Gulf', bbox:[-37.2, 174.5, -35.9, 175.7], est:'~40 MB' },
+  nl:{ name:'Northland', bbox:[-36.1, 173.4, -34.8, 174.9], est:'~45 MB' },
+  bop:{ name:'Bay of Plenty', bbox:[-38.0, 175.8, -37.1, 177.3], est:'~35 MB' }
+};
+const SPOT_KM = 5.556;   // 3 nm of close-up detail around each spot
+let OFF_JOB = null, OFF_LAST = null, spotSyncTimer = null;
+const offlineOK = () => 'caches' in window && !!(navigator.serviceWorker && navigator.serviceWorker.controller) && /^https?:$/.test(location.protocol);
+const spotsOn = () => (LS.get('ghfp.offlineSpots') || {}).on !== false;
+/* Styles, fonts, icons and tile templates shared by every download. */
+async function offlineBase(){
+  const getJSON = u => fetch(u, { cache:'no-store' }).then(r => { if(!r.ok) throw new Error(u); return r.json(); });
+  const styles = [MAP_STYLES.light, MAP_STYLES.dark], shared = new Set(styles), rasters = new Set(), vec = new Set();
+  for(const s of await Promise.all(styles.map(getJSON))){
+    Object.values(s.sources).forEach(src => {
+      if(src.url){ shared.add(src.url); if(src.type === 'vector') vec.add(src.url); }
+      if(src.tiles && src.type === 'raster') rasters.add(src.tiles[0]);
+    });
+    [].concat(s.sprite || []).map(x => typeof x === 'string' ? x : x.url).forEach(sp => ['.json', '.png', '@2x.json', '@2x.png'].forEach(ext => shared.add(sp + ext)));
+    if(s.glyphs) glyphUrls(s, s.glyphs, ['0-255', '256-511', '8192-8447']).forEach(u => shared.add(u));
+  }
+  const tjs = await Promise.all([...vec].map(getJSON));
+  return { shared:[...shared], rasters:[...rasters], vectors:tjs.map(tj => ({ template:tj.tiles[0], maxzoom:Math.min(14, tj.maxzoom || 14) })) };
+}
+function regionFiles(b, region){
+  const bbox = OFFLINE_REGIONS[region].bbox, list = new Set(b.shared);
+  b.rasters.forEach(t => regionTileUrls(bbox, 0, 6, t).forEach(u => list.add(u)));
+  b.vectors.forEach(v => regionTileUrls(bbox, 0, v.maxzoom, v.template).forEach(u => list.add(u)));
+  return [...list];
+}
+function spotsFiles(b, pins){
+  const list = new Set(b.shared);
+  Object.values(OFFLINE_REGIONS).forEach(r => {
+    b.rasters.forEach(t => regionTileUrls(r.bbox, 0, 6, t).forEach(u => list.add(u)));
+    b.vectors.forEach(v => regionTileUrls(r.bbox, 0, 11, v.template).forEach(u => list.add(u)));
+  });
+  b.vectors.forEach(v => spotTileUrls(pins, SPOT_KM, 12, v.maxzoom, v.template).forEach(u => list.add(u)));
+  return [...list];
+}
+/* Fetch every missing file into the cache, 6 at a time, resuming past anything already saved. */
+async function fetchInto(cache, files, job){
+  const meta = await caches.open('tiles-meta');
+  job.total = files.length; renderOfflineProgress();
+  let i = 0, stop = null;
+  const worker = async () => {
+    while(i < files.length && !job.cancel && !stop){
+      const u = files[i++], isMeta = isMetaUrl(u), target = isMeta ? meta : cache;
+      if(!isMeta && await cache.match(u)){ job.done++; continue; }   // tiles and fonts resume; meta is always refreshed
+      let ok = false;
+      for(let a = 0; a < 3 && !ok && !stop; a++){
+        try{ const r = await fetch(u, { mode:'cors', cache:isMeta ? 'no-store' : 'default' }); job.fetched++; if(r.ok){ await target.put(u, r); ok = true; } }
+        catch(err){ if(err && err.name === 'QuotaExceededError') stop = 'Not enough space on this device.'; }
+      }
+      if(!ok) job.fail++;
+      job.done++;
+      if(job.done % 25 === 0) renderOfflineProgress();
+    }
+  };
+  await Promise.all(Array.from({ length:6 }, worker));
+  if(stop) throw new Error(stop);
+}
+async function runOfflineJob(region, quiet){
+  if(OFF_JOB) return;
+  OFF_JOB = { region, done:0, total:0, fail:0, fetched:0, pruned:0, cancel:false };
+  renderOffline();
+  let msg = null;
+  try{
+    if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask the phone not to clear it
+    const b = await offlineBase();
+    await pruneOldVersions(b);
+    if(region === 'spots'){
+      const pins = loadPins(), files = spotsFiles(b, pins), cache = await caches.open('tiles-spots');
+      await fetchInto(cache, files, OFF_JOB);
+      if(!OFF_JOB.cancel){
+        const stale = staleTiles((await cache.keys()).map(r => r.url), new Set(files), 12);   // detail no spot needs any more
+        for(const u of stale) await cache.delete(u);
+        OFF_JOB.pruned = stale.length;
+        LS.set('ghfp.offlineSpots', { on:true, at:Date.now(), files:files.length, spots:pins.length, gaps:OFF_JOB.fail });
+        if(!quiet) msg = 'Map around your spots saved for offline use.';
+      }
+    }else{
+      const files = regionFiles(b, region), cache = await caches.open('tiles-' + region);
+      await fetchInto(cache, files, OFF_JOB);
+      if(!OFF_JOB.cancel){
+        const rec = LS.get('ghfp.offline') || {};
+        rec[region] = { at:Date.now(), files:files.length, gaps:OFF_JOB.fail, stale:false };
+        LS.set('ghfp.offline', rec);
+        msg = OFFLINE_REGIONS[region].name + ' map saved for offline use' + (OFF_JOB.fail > files.length * 0.005 ? ', with some gaps. Tap Update to fill them.' : '.');
+      }
+    }
+  }catch(err){ if(!quiet || /space/.test((err && err.message) || '')) msg = err && /space/.test(err.message || '') ? err.message : 'Download stopped. Tap Download to resume.'; }
+  OFF_LAST = OFF_JOB; OFF_JOB = null; renderOffline();
+  if(msg) snack(msg);
+}
+/* After OpenFreeMap moves to a new tile version: drop old-version tiles and stray meta copies from every saved cache,
+   and flag full regions that lost tiles so they can be updated. */
+async function pruneOldVersions(b){
+  const template = b.vectors[0] && b.vectors[0].template, rec = LS.get('ghfp.offline') || {};
+  for(const name of (await caches.keys()).filter(k => k.startsWith('tiles-') && k !== 'tiles-meta')){
+    const c = await caches.open(name), urls = (await c.keys()).map(r => r.url);
+    const old = outdatedTiles(urls, template), metaCopies = urls.filter(isMetaUrl);
+    for(const u of old.concat(metaCopies)) await c.delete(u);
+    const region = name.slice(6);
+    if(old.length && rec[region]){ rec[region].stale = true; LS.set('ghfp.offline', rec); }
+  }
+}
+function downloadRegion(region){ return runOfflineJob(region, false); }
+/* Keep "around my spots" current: quietly, a few seconds after spots change or the app opens. */
+function scheduleSpotSync(){
+  clearTimeout(spotSyncTimer);
+  spotSyncTimer = setTimeout(() => { if(offlineOK() && spotsOn() && navigator.onLine !== false) runOfflineJob('spots', true); }, 4000);
+}
+async function setSpotsOffline(on){
+  if(on){ LS.set('ghfp.offlineSpots', Object.assign(LS.get('ghfp.offlineSpots') || {}, { on:true })); runOfflineJob('spots', false); }
+  else{ await caches.delete('tiles-spots'); LS.set('ghfp.offlineSpots', { on:false }); renderOffline(); }
+}
+async function deleteRegion(region){
+  await caches.delete('tiles-' + region);
+  const rec = LS.get('ghfp.offline') || {}; delete rec[region]; LS.set('ghfp.offline', rec);
+  renderOffline();
+}
+function renderOfflineProgress(){
+  const el = $('offProg');
+  if(el && OFF_JOB) el.textContent = OFF_JOB.total ? Math.floor(OFF_JOB.done / OFF_JOB.total * 100) + '%' : 'Preparing…';
+}
+function renderOffline(){
+  const box = $('offlineBox'); if(!box) return;
+  if(!offlineOK()){ box.hidden = true; return; }
+  const rec = LS.get('ghfp.offline') || {}, sp = LS.get('ghfp.offlineSpots') || {}, on = spotsOn();
+  const prog = () => 'Saving <span id="offProg">' + (OFF_JOB.total ? Math.floor(OFF_JOB.done / OFF_JOB.total * 100) + '%' : 'Preparing…') + '</span>';
+  const day = t => new Date(t).toLocaleDateString('en-NZ', { day:'numeric', month:'short' });
+  const spBusy = OFF_JOB && OFF_JOB.region === 'spots';
+  box.hidden = false;
+  box.innerHTML = '<h3 class="sub-h">Offline map</h3><p class="xsmall muted">Works with no signal. Satellite view isn’t saved.</p>'
+    + '<div class="off-row"><div class="off-main"><b>Around my spots</b><span class="xsmall muted">'
+      + (spBusy ? prog() : !on ? 'Off' : sp.at ? 'Ready · ' + sp.spots + ' spot' + (sp.spots === 1 ? '' : 's') + ' · updated ' + day(sp.at) + (sp.gaps ? ' · some gaps' : '') : 'Saves automatically')
+      + '</span><span class="xsmall muted">Overview of all regions plus close-up detail within 3 nm of each spot</span></div>'
+      + (spBusy ? '<button class="btn text" type="button" data-off="cancel">Cancel</button>'
+        : (on ? '<button class="btn text" type="button" data-off="spots-now"' + (OFF_JOB ? ' disabled' : '') + '>Update</button>' : '')
+          + '<button class="btn ' + (on ? 'text' : 'tonal') + '" type="button" data-off="spots-toggle" aria-pressed="' + on + '">' + (on ? 'Turn off' : 'Turn on') + '</button>')
+    + '</div>'
+    + '<p class="xsmall muted off-sub">Full regions (every detail, larger download):</p>'
+    + Object.entries(OFFLINE_REGIONS).map(([k, r]) => {
+      const busy = OFF_JOB && OFF_JOB.region === k, saved = rec[k];
+      return '<div class="off-row"><div class="off-main"><b>' + r.name + '</b><span class="xsmall muted">'
+        + (busy ? prog() : saved ? (saved.stale ? 'Map data has changed · tap Update' : 'Saved ' + day(saved.at) + (saved.gaps ? ' · some gaps' : '')) : 'Not saved · ' + r.est) + '</span></div>'
+        + (busy ? '<button class="btn text" type="button" data-off="cancel">Cancel</button>'
+          : '<button class="btn ' + (saved ? 'text' : 'outlined') + '" type="button" data-off="get" data-r="' + k + '"' + (OFF_JOB ? ' disabled' : '') + '>' + (saved ? 'Update' : 'Download') + '</button>'
+            + (saved ? '<button class="btn text" type="button" data-off="del" data-r="' + k + '">Delete</button>' : ''))
+        + '</div>';
+    }).join('');
+  box.querySelectorAll('[data-off]').forEach(b => b.addEventListener('click', () => {
+    const a = b.dataset.off;
+    if(a === 'cancel'){ if(OFF_JOB) OFF_JOB.cancel = true; }
+    else if(a === 'spots-now') runOfflineJob('spots', false);
+    else if(a === 'spots-toggle') setSpotsOffline(!spotsOn());
+    else if(a === 'get') downloadRegion(b.dataset.r);
+    else if(confirm('Delete the saved ' + OFFLINE_REGIONS[b.dataset.r].name + ' map?')) deleteRegion(b.dataset.r);
+  }));
+}
 /* ---- Today: your best spots ---- */
 let BEST_DAY = 'today', BEST_ALL = false, bestTimer = null;
 function scheduleBest(){ clearTimeout(bestTimer); bestTimer = setTimeout(renderBestSpots, 250); }
@@ -2673,8 +3074,8 @@ function renderBestSpots(){
     $('bsGo').addEventListener('click', () => setTab('map'));
   }else{
     const ranked = rankSpots(pins.map(p => {
-      const live = PIN_LIVE[p.id], { sum, ctx, score, tp } = spotScore(p, live, dateStr);
-      return { pin:p, conditions:score.total, hasForecast:score.hasForecast, sum, best:ctx.best, tp, loading:!pinTried(p.id),
+      const live = PIN_LIVE[p.id], { sum, ctx, score, tp, rules } = spotScore(p, live, dateStr);
+      return { pin:p, conditions:score.total, hasForecast:score.hasForecast, sum, best:ctx.best, tp, rulesOk:rules.ok, loading:!pinTried(p.id),
         fish:likelyFor(p, monthOf(dateStr), pinSST(live, p, dateStr).sst, SPECIES) };
     }));
     const shown = BEST_ALL ? ranked : ranked.slice(0, 5);
@@ -2684,7 +3085,7 @@ function renderBestSpots(){
           + (r.loading ? '<span>Loading forecast…</span>' : r.sum.windKt == null ? '<span>Tide and moon only</span>'
             : '<span class="wind-tag ' + windClass(r.sum.windKt) + '">' + Math.round(r.sum.windKt) + ' kt ' + windDirLabel(r.sum.windDir) + '</span>')
           + (r.best ? '<span>Bite ' + fmtClock(r.best.s) + '–' + fmtClock(r.best.e) + '</span>' : '')
-          + '<span>' + esc(TIDE_PORTS[r.tp.port].name) + ' tides</span></span>'
+          + '<span>' + esc(TIDE_PORTS[r.tp.port].name) + ' tides</span>' + (r.rulesOk ? '' : '<span class="bs-out">outside your rules</span>') + '</span>'
           + (r.top.length ? '<span class="bs-fish">' + r.top.map(f => '<span>' + (f.species.img ? '<img src="' + esc(f.species.img.src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' : '') + esc(f.species.name) + '</span>').join('') + '</span>' : '')
         + '</span></button></li>').join('') + '</ol>'
       + (ranked.length > 5 ? '<button class="btn text bs-more" type="button" id="bsMore">' + (BEST_ALL ? 'Show top 5' : 'Show all ' + ranked.length) + '</button>' : '');
@@ -2719,12 +3120,18 @@ function openPinForm(pin, isNew){
   $('pinCoord').textContent = pin.lat.toFixed(5) + ', ' + pin.lon.toFixed(5) + ' · ' + ddm(pin.lat, pin.lon);
   $('pinName').value = pin.name; $('pinDepth').value = pin.depth == null ? '' : pin.depth; $('pinNotes').value = pin.notes || '';
   $('pinHabitats').innerHTML = HABITATS.map(h => '<button type="button" class="chip" data-h="' + h.id + '" aria-pressed="' + pin.habitats.includes(h.id) + '">' + h.label + '</button>').join('');
+  const r = pin.rules || { dirs:[], maxKt:null, tide:'any' };
+  $('pinDirs').innerHTML = DIR8.map(d => '<button type="button" class="chip" data-d="' + d + '" aria-pressed="' + r.dirs.includes(d) + '">' + d + '</button>').join('');
+  $('pinMaxKt').value = r.maxKt == null ? '' : r.maxKt;
+  $('pinTide').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tide === r.tide)));
   $('pinDlg').showModal(); $('pinName').focus();
 }
 function submitPinForm(e){
   e.preventDefault();
   const habitats = [...$('pinHabitats').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.h);
-  const p = upsertPin(Object.assign({}, PIN_EDIT, { name:$('pinName').value, depth:$('pinDepth').value, notes:$('pinNotes').value, habitats }));
+  const p = upsertPin(Object.assign({}, PIN_EDIT, { name:$('pinName').value, depth:$('pinDepth').value, notes:$('pinNotes').value, habitats,
+    rules:{ dirs:[...$('pinDirs').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.d), maxKt:$('pinMaxKt').value,
+      tide:($('pinTide').querySelector('[aria-pressed="true"]') || { dataset:{ tide:'any' } }).dataset.tide } }));
   $('pinDlg').close();
   if(!p) return;
   drawPinMarkers(); openSpot(p.id);
@@ -2743,6 +3150,7 @@ function drawPinMarkers(){
   const pins = loadPins();
   $('mapHint').hidden = pins.length > 0;
   renderBestSpots();
+  scheduleSpotSync();   // offline detail follows your spots
   if(!MAP) return;
   Object.values(PIN_MARKERS).forEach(m => m.remove()); PIN_MARKERS = {};
   pins.forEach(p => {
@@ -2760,22 +3168,26 @@ function openSpotList(){
     + (isWide() ? '' : '<button class="icon-btn" type="button" data-act="close" aria-label="Close">' + icon('close') + '</button>') + '</div>'
     + (pins.length
       ? '<ul class="spots" style="margin-top:8px;">' + pins.map(p => '<li><button type="button" class="spot-row" data-id="' + esc(p.id) + '">' + icon('pin')
-          + '<span class="spot-main"><span class="spot-name">' + esc(p.name) + '</span><span class="xsmall muted">' + esc(p.habitats.map(habLabel).join(', ') || 'No habitat set') + '</span></span></button></li>').join('') + '</ul>'
+          + '<span class="spot-main"><span class="spot-name">' + esc(p.name) + '</span><span class="xsmall muted">' + esc(p.habitats.map(habLabel).join(', ') || 'No habitat set') + '</span><span class="row-dist xsmall muted">' + (POS ? esc(fromYou(p)) : '') + '</span></span></button></li>').join('') + '</ul>'
         + '<div class="garmin-bar"><button class="btn outlined" type="button" id="gpxAll">' + icon('download') + ' All spots as GPX</button></div>'
       : '<p class="muted" style="margin-top:8px;">No spots yet. Tap the map where you fish, or use “Pin my location”.</p>');
   sh.hidden = false;
   const c = sh.querySelector('[data-act=close]'); if(c) c.addEventListener('click', () => { sh.hidden = true; });
   sh.querySelectorAll('.spot-row').forEach(b => b.addEventListener('click', () => openSpot(b.dataset.id, true)));
   const g = $('gpxAll'); if(g) g.addEventListener('click', () => downloadGPX(pins, 'My fishing spots'));
+  sh.insertAdjacentHTML('beforeend', '<div id="offlineBox" hidden></div>'); renderOffline();
 }
 function spotHeader(p){
   return '<div class="sheet-head"><div class="sheet-title-wrap"><h2 class="sheet-title">' + esc(p.name) + '</h2>'
-    + '<div class="xsmall muted">' + p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + (p.depth ? ' · ' + p.depth + ' m' : '') + '</div></div>'
+    + '<div class="xsmall muted">' + p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + (p.depth ? ' · ' + p.depth + ' m' : '') + '</div>'
+    + '<button class="dist-btn" type="button" id="spotDist" data-act="units" title="Tap to switch nm / km"' + (POS ? '>From you: ' + esc(fromYou(p)) : ' hidden>') + '</button></div>'
     + '<button class="icon-btn" type="button" data-act="close" aria-label="' + (isWide() ? 'Back to my spots' : 'Close') + '">' + icon('close') + '</button></div>'
     + (p.habitats.length ? '<div class="chips sp-chips" style="margin:8px 0;">' + p.habitats.map(h => '<span class="chip static">' + habLabel(h) + '</span>').join('') + '</div>' : '')
+    + (r => r && (r.dirs.length || r.maxKt != null || r.tide !== 'any') ? '<p class="xsmall muted spot-rules">Fishable: ' + esc([r.dirs.length ? r.dirs.join('/') + ' wind' : '', r.maxKt != null ? '≤' + r.maxKt + ' kt' : '', r.tide === 'in' ? 'incoming tide' : r.tide === 'out' ? 'outgoing tide' : ''].filter(Boolean).join(' · ')) + '</p>' : '')(p.rules)
     + (p.notes ? '<p class="small spot-notes">' + esc(p.notes) + '</p>' : '')
     + '<div class="spot-actions"><button class="btn tonal" type="button" data-act="edit">' + icon('edit') + ' Edit</button>'
     + '<button class="btn outlined" type="button" data-act="gpx">' + icon('download') + ' GPX</button>'
+    + '<button class="btn tonal" type="button" data-act="guide">' + icon('nav') + ' Guide me</button>'
     + '<button class="btn text" type="button" data-act="del">' + icon('trash') + ' Delete</button></div>';
 }
 function wireSpotHeader(p){
@@ -2783,6 +3195,8 @@ function wireSpotHeader(p){
   sh.querySelector('[data-act=close]').addEventListener('click', closeSheet);
   sh.querySelector('[data-act=edit]').addEventListener('click', () => openPinForm(p, false));
   sh.querySelector('[data-act=gpx]').addEventListener('click', () => downloadGPX([p], p.name));
+  sh.querySelector('[data-act=units]').addEventListener('click', toggleUnits);
+  sh.querySelector('[data-act=guide]').addEventListener('click', () => startGuide(p.id));
   sh.querySelector('[data-act=del]').addEventListener('click', () => {
     if(!confirm('Delete “' + p.name + '”?')) return;
     deletePin(p.id); SEL_PIN = null; drawPinMarkers(); closeSheet(); snack('Deleted ' + p.name + '.');
@@ -2809,6 +3223,8 @@ function setTab(name, fromHash){
   TABS.forEach(t => { $('tab-' + t).hidden = t !== name; });
   document.querySelectorAll('.nav-item').forEach(b => { if(b.dataset.tab === name) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   document.body.classList.toggle('on-map', name === 'map');
+  if(name !== 'map'){ setTracking(false); RESUME_TRACK = false; }
+  else if(GUIDE) setTracking(true);   // still guiding: pick the GPS back up
   if(name === 'map') openMapTab();
   if(name === 'plan' && (renderBriefing.dirty || !$('briefing').innerHTML)){ renderBriefing.dirty = false; renderBriefing(); }
   if(!fromHash && location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
@@ -2872,7 +3288,7 @@ function init(){
   $('helpClose').addEventListener('click', () => $('helpDlg').close());
   $('helpDlg').addEventListener('click', e => { if(e.target === $('helpDlg')) $('helpDlg').close(); });
   window.addEventListener('scroll', () => $('appbar').classList.toggle('scrolled', window.scrollY > 4), { passive:true });
-  setupPlan(); setupMapUI(); setupPWA(); $('mapHint').hidden = loadPins().length > 0; renderInSeason(); renderSpecies(); renderBigGame();
+  setupPlan(); setupMapUI(); setupPWA(); scheduleSpotSync(); $('mapHint').hidden = loadPins().length > 0; renderInSeason(); renderSpecies(); renderBigGame();
   try{ renderReportsAll(); }catch(err){ LS.del(AI_KEY); renderReportsAll(); }
   renderToday();
   setTab(location.hash.slice(1) || LS.get('ghfp.tab') || 'today', true);

@@ -1,7 +1,7 @@
 /* Gulf Fishing Planner service worker. Built by tools/build-site.mjs, which fills in VERSION.
    Shell (the app, icons, MapLibre): stale-while-revalidate from a versioned cache, so it opens offline.
    Fonts: runtime cache. Weather, tiles, photos and AI calls: always network (the app handles failures). */
-const VERSION = 'b47907eeb4';
+const VERSION = '0571eb685f';
 const SHELL_CACHE = 'shell-' + VERSION, RUNTIME_CACHE = 'runtime-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png'];
 const LIBS = ['https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js', 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'];
@@ -10,6 +10,7 @@ function strategyFor(url, origin){
   if(url.origin === origin) return 'shell';
   if(url.origin === 'https://unpkg.com' && url.pathname.startsWith('/maplibre-gl@')) return 'shell';
   if(url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') return 'runtime';
+  if(url.origin === 'https://tiles.openfreemap.org') return 'tiles';   // offline map: served from regions the user saved
   return 'network';
 }
 
@@ -27,6 +28,16 @@ self.addEventListener('fetch', e => {
   if(req.method !== 'GET') return;
   const url = new URL(req.url), kind = strategyFor(url, self.location.origin);
   if(kind === 'network') return;
+  if(kind === 'tiles'){
+    // Tiles, fonts and sprite images: saved copy first (works with no signal). Styles and TileJSON: fresh when online,
+    // because OpenFreeMap can move to a new tile version; the saved copy is the offline fallback. Nothing is cached here:
+    // storage only grows when the user downloads a region.
+    const isData = /\.(pbf|png)$/.test(url.pathname);
+    e.respondWith(isData
+      ? caches.match(req).then(hit => hit || fetch(req))
+      : fetch(req).catch(() => caches.match(req).then(hit => hit || Response.error())));
+    return;
+  }
   const cacheName = kind === 'shell' ? SHELL_CACHE : RUNTIME_CACHE;
   const key = req.mode === 'navigate' ? './index.html' : req;
   e.respondWith(caches.open(cacheName).then(async c => {

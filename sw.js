@@ -1,7 +1,7 @@
 /* Gulf Fishing Planner service worker. Built by tools/build-site.mjs, which fills in VERSION.
    Shell (the app, icons, MapLibre): stale-while-revalidate from a versioned cache, so it opens offline.
    Fonts: runtime cache. Weather, tiles, photos and AI calls: always network (the app handles failures). */
-const VERSION = '8fb6782fa3';
+const VERSION = 'b47907eeb4';
 const SHELL_CACHE = 'shell-' + VERSION, RUNTIME_CACHE = 'runtime-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png'];
 const LIBS = ['https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js', 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'];
@@ -14,7 +14,7 @@ function strategyFor(url, origin){
 }
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL).then(() => c.addAll(LIBS).catch(() => {}))));   // libraries are best-effort
+  e.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache:'reload' }))).then(() => c.addAll(LIBS).catch(() => {}))));   // libraries are best-effort
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('shell-') && k !== SHELL_CACHE).map(k => caches.delete(k))))

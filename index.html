@@ -99,7 +99,7 @@ p{ margin:0 0 10px; }
 .icon-btn.spin .icon{ animation:spin 1s linear infinite; }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 .live-dot{ width:8px; height:8px; border-radius:50%; background:var(--outline-strong); display:inline-block; }
-.live-dot.ok{ background:var(--good); } .live-dot.err{ background:var(--bad); }
+.live-dot.ok{ background:var(--good); } .live-dot.warn{ background:var(--warn); } .live-dot.err{ background:var(--bad); }
 .chip-stale{ border-radius:8px; padding:0 8px; background:var(--warn-container); color:var(--warn); font-weight:500; }
 
 /* ===== Layout: nav bar (mobile) / rail (desktop) ===== */
@@ -848,6 +848,12 @@ function bestDays(today){
   const sat = (6 - wd + 7) % 7, sun = (7 - wd) % 7 || 7;
   [['sat', 'Sat', sat], ['sun', 'Sun', sun]].forEach(([k, l, n]) => { if(n <= 6 && !out.some(o => o[2] === day(n))) out.push([k, l, day(n)]); });   // spot cards show 7 days
   return out;
+}
+/* A saved Today forecast worth drawing on startup: well-formed, has at least one good point, not older than maxMs. */
+function cachedLiveUsable(saved, now, maxMs){
+  if(!saved || typeof saved !== 'object' || typeof saved.at !== 'number' || !saved.live || typeof saved.live !== 'object') return null;
+  if(saved.at > now + 5 * 60e3 || now - saved.at > maxMs) return null;
+  return Object.values(saved.live).some(d => d && !d.error && d.weather) ? saved : null;
 }
 function isFresh(d, now, okMs, errMs){ return !!d && now - d.at < (d.error ? errMs : okMs); }
 /* Don't refetch: data is fresh, or a fetch failed within errMs (even if older good data was kept). */
@@ -1630,6 +1636,24 @@ const LS = {
 const AI_KEY = 'ghfp.aiReports';
 let LIVE = {};                 // point key -> { weather, marine } | { error }
 let LIVE_AT = null;
+const LIVE_KEY = 'ghfp.live', LIVE_MAX_AGE = 3 * 864e5;   // show a saved Today forecast for up to 3 days
+function liveStamp(d){
+  const t = d.toLocaleTimeString('en-NZ', { hour:'numeric', minute:'2-digit', timeZone:'Pacific/Auckland' });
+  return nzParts(d).date === todayNZ() ? t : d.toLocaleDateString('en-NZ', { weekday:'short', timeZone:'Pacific/Auckland' }) + ' ' + t;
+}
+function saveLive(){
+  const keep = {};
+  REFERENCE_POINTS.forEach(p => { const d = LIVE[p.key]; if(d && !d.error) keep[p.key] = { weather:d.weather, marine:d.marine }; });
+  if(LIVE_AT && Object.keys(keep).length) LS.set(LIVE_KEY, { at:LIVE_AT.getTime(), live:keep });
+}
+/* Draw from the last saved forecast straight away; refreshAll replaces it when fresh data lands. */
+function restoreLive(){
+  const s = cachedLiveUsable(LS.get(LIVE_KEY), Date.now(), LIVE_MAX_AGE);
+  if(!s) return false;
+  LIVE = Object.assign({}, s.live); LIVE_AT = new Date(s.at);
+  $('liveDot').className = 'live-dot warn'; $('liveLabel').textContent = 'Saved ' + liveStamp(LIVE_AT) + ' · updating…';
+  return true;
+}
 let speciesFilter = 'season', reportFilter = 'all';
 
 const $ = id => document.getElementById(id);
@@ -2331,11 +2355,15 @@ async function fetchPoint(p){
 
 async function refreshAll(){
   const btn = $('refreshBtn'), dot = $('liveDot'), label = $('liveLabel');
-  btn.classList.add('spin'); btn.disabled = true; label.textContent = 'Updating…';
-  const results = await Promise.all(REFERENCE_POINTS.map(p => fetchPoint(p).then(d => { LIVE[p.key] = d; }, () => { LIVE[p.key] = { error:true }; })
+  btn.classList.add('spin'); btn.disabled = true;
+  label.textContent = LIVE_AT ? (Date.now() - LIVE_AT < 60e3 ? 'Updating…' : 'Saved ' + liveStamp(LIVE_AT) + ' · updating…') : 'Updating…';
+  let fresh = 0;
+  const results = await Promise.all(REFERENCE_POINTS.map(p => fetchPoint(p).then(d => { LIVE[p.key] = d; fresh++; },
+      () => { if(!LIVE[p.key] || LIVE[p.key].error) LIVE[p.key] = { error:true }; })   // keep the last good forecast
     .then(() => renderAreaCard(p))));
-  const okCount = REFERENCE_POINTS.filter(p => !LIVE[p.key].error).length;
-  if(okCount){ LIVE_AT = new Date(); dot.className = 'live-dot ok'; label.textContent = 'Updated ' + LIVE_AT.toLocaleTimeString('en-NZ', { hour:'numeric', minute:'2-digit', timeZone:'Pacific/Auckland' }); }
+  const haveData = REFERENCE_POINTS.some(p => LIVE[p.key] && !LIVE[p.key].error);
+  if(fresh){ LIVE_AT = new Date(); dot.className = 'live-dot ok'; label.textContent = 'Updated ' + liveStamp(LIVE_AT); saveLive(); }
+  else if(haveData && LIVE_AT){ dot.className = 'live-dot warn'; label.textContent = 'Offline · forecast saved ' + liveStamp(LIVE_AT); }
   else { dot.className = 'live-dot err'; label.textContent = 'Offline: showing tides and moon only'; }
   btn.classList.remove('spin'); btn.disabled = false;
   renderToday(); renderSST(); renderVintage(); renderReportsAge();
@@ -2814,6 +2842,9 @@ function setupPWA(){
   };
   navigator.serviceWorker.register('sw.js').then(reg => {
     if(reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+    const check = () => reg.update().catch(() => {});   // a new version then shows the Reload notice
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') check(); });
+    setInterval(check, 3600e3);
     const b = $('updBtn'); b.hidden = false;
     b.addEventListener('click', () => {
       if(reg.waiting) return offer(reg.waiting);
@@ -2830,6 +2861,7 @@ function setupPWA(){
 
 function init(){
   applyTheme(LS.get('ghfp.theme'));
+  restoreLive();
   $('areaCards').innerHTML = REFERENCE_POINTS.map(p => '<div class="card" id="area-' + p.key + '"></div>').join('');
   REFERENCE_POINTS.forEach(renderAreaCard);
   document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));

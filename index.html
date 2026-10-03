@@ -1296,7 +1296,13 @@ function keepCheck(o){
   if(!lim){ lines.push({ ok:null, t:o.rulesText ? 'Rules: ' + o.rulesText : 'No limits on file: check MPI' }); worse('check'); }
   else{
     const bag = String(lim.bag || ''), mls = String(lim.mls || '').trim(), kept = o.keptToday || 0;
-    if(o.closed || /closed/i.test(bag)){ lines.push({ ok:false, t:'Closed: this fishery is closed to taking' }); worse('release'); }
+    const partly = /still open|where open/i.test(bag), n0 = /^\s*(\d+)/.exec(bag);
+    if(o.closed && partly){   // e.g. rock lobster: closed in most of the Gulf, a small bag where still open
+      lines.push({ ok:null, t:'Closed in most areas: check it’s open where you are' }); worse('check');
+      if(n0 && kept >= +n0[1]){ lines.push({ ok:false, t:'You’ve reached the daily bag of ' + n0[1] }); worse('release'); }
+      if(mls && !/^none$/i.test(mls) && mlsCm(mls) == null) lines.push({ ok:null, t:'Check size: ' + mls });
+    }
+    else if(o.closed || /closed/i.test(bag)){ lines.push({ ok:false, t:'Closed: this fishery is closed to taking' }); worse('release'); }
     else{
       const min = mlsCm(mls);
       if(min != null){
@@ -2955,7 +2961,7 @@ function setBase(base){
 }
 function syncBaseButtons(){ document.querySelectorAll('.map-base button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.base === MAP_BASE))); }
 /* ---- No-take areas (bundled DOC boundaries) ---- */
-let AREAS_ON = LS.get('ghfp.areas') !== false, AREAS_GJ = null, AREA_LAST = '';
+let AREAS_WAIT = false, AREAS_ON = LS.get('ghfp.areas') !== false, AREAS_GJ = null, AREA_LAST = '';
 const DOC_MAPS = 'https://www.doc.govt.nz/parks-and-recreation/places-to-go/auckland/hauraki-gulf-marine-park/marine-protection-maps/';
 function areasGeoJSON(){
   return AREAS_GJ || (AREAS_GJ = { type:'FeatureCollection', features:NO_TAKE.areas.map(a => ({ type:'Feature', properties:{ name:a.n, kind:a.k },
@@ -2965,11 +2971,11 @@ function drawAreas(styleJustLoaded){
   if(!MAP) return;
   const vis = () => ['notake-fill', 'notake-line'].forEach(id => { if(MAP.getLayer(id)) MAP.setLayoutProperty(id, 'visibility', AREAS_ON ? 'visible' : 'none'); });
   if(MAP.getLayer('notake-line')) return vis();   // isStyleLoaded() is false while tiles load, so toggling must not wait for it
-  if(!(styleJustLoaded || MAP.isStyleLoaded())){ MAP.once('idle', () => drawAreas()); return; }
+  if(!(styleJustLoaded || MAP.isStyleLoaded())){ if(!AREAS_WAIT){ AREAS_WAIT = true; MAP.once('idle', () => { AREAS_WAIT = false; drawAreas(); }); } return; }
   if(!MAP.getSource('notake')) MAP.addSource('notake', { type:'geojson', data:areasGeoJSON(), attribution:'No-take areas © DOC (CC BY 4.0)' });
   const before = MAP.getLayer('guide') ? 'guide' : undefined;
   if(!MAP.getLayer('notake-fill')) MAP.addLayer({ id:'notake-fill', type:'fill', source:'notake', paint:{ 'fill-color':'#C62828', 'fill-opacity':0.16 } }, before);
-  if(!MAP.getLayer('notake-line')) MAP.addLayer({ id:'notake-line', type:'line', source:'notake', paint:{ 'line-color':'#C62828', 'line-width':1.5, 'line-opacity':0.85 } }, before);
+  if(!MAP.getLayer('notake-line')) MAP.addLayer({ id:'notake-line', type:'line', source:'notake', paint:{ 'line-color':'#C62828', 'line-width':1.5, 'line-opacity':0.85, 'line-dasharray':['step', ['zoom'], ['literal', [3, 2]], 10, ['literal', [1, 0]]] } }, before);
   vis();
 }
 function setAreas(on){

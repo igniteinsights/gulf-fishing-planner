@@ -387,6 +387,8 @@ dialog::backdrop{ background:var(--scrim); }
 .dlg-body{ padding:0 24px 24px; overflow:auto; }
 .seg{ display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--outline-strong); border-radius:20px; overflow:hidden; margin:8px 0 16px; }
 .seg button{ border:0; background:transparent; min-height:40px; font-size:.875rem; font-weight:500; cursor:pointer; color:var(--ink); }
+.seg.sp-view{ grid-template-columns:repeat(2,1fr); max-width:320px; margin:0 0 16px; }
+.bg-title{ font-size:1.25rem; margin:0 0 6px; }
 .seg button + button{ border-left:1px solid var(--outline-strong); }
 .seg button[aria-selected="true"], .seg button[aria-pressed="true"]{ background:var(--secondary-container); color:var(--on-secondary-container); }
 ol.howto{ padding-left:22px; margin:0 0 16px; display:grid; gap:8px; }
@@ -452,6 +454,20 @@ body.on-map footer{ display:none; }
 .rule-row{ display:flex; align-items:center; gap:10px; margin-top:8px; font-size:.875rem; color:var(--ink-2); }
 .rule-row input{ width:90px; }
 .rule-tide{ margin:8px 0 0; }
+.catch-size{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.field[hidden], .rule-row[hidden], .note[hidden]{ display:none; }   /* their display rules would otherwise override hidden */
+.seg.catch-kept{ grid-template-columns:repeat(2,1fr); margin:0; }
+.catch-preview{ margin-top:8px; max-width:160px; border-radius:var(--radius-s); }
+#catchDlg select.key-input{ min-height:44px; }
+.catch-totals{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; text-align:center; }
+.catch-totals b{ display:block; font-size:1.5rem; font-weight:500; }
+.catch-totals span{ font-size:.75rem; color:var(--ink-2); }
+.catch-pattern{ margin:12px 0 0; }
+.catch-bar{ margin:14px 0 10px; }
+.catch-chips{ margin-bottom:10px; } .catch-chips .chip{ height:32px; }
+.spot-catches{ display:flex; align-items:center; gap:6px; margin:4px 0 0; color:var(--ink-2); } .spot-catches .icon{ width:16px; height:16px; color:var(--primary); }
+.catch-backup{ margin-top:18px; } .catch-backup h3{ margin-bottom:4px; }
+.catch-photo img{ width:100%; border-radius:var(--radius-m); display:block; margin-bottom:12px; }
 .bs-out{ color:var(--warn); font-weight:500; }
 .spot-rules{ margin:2px 0 0; }
 .pin-actions{ display:flex; justify-content:flex-end; gap:8px; }
@@ -591,6 +607,7 @@ body.on-map footer{ display:none; }
   <symbol id="i-nav" viewBox="0 0 24 24"><path d="M3.5 10.5L20.5 3.5l-7 17-2.2-7.8z"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-hook" viewBox="0 0 24 24"><path d="M14 4v8a5 5 0 0 1-10 0v-2l3 3"/><circle cx="14" cy="3" r="1.5"/></symbol>
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4L3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></symbol>
   <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
@@ -604,7 +621,7 @@ body.on-map footer{ display:none; }
     <button class="nav-item" data-tab="map"><span class="pill"><svg class="icon"><use href="#i-map"/></svg></span>Map</button>
     <button class="nav-item" data-tab="plan"><span class="pill"><svg class="icon"><use href="#i-plan"/></svg></span>Plan</button>
     <button class="nav-item" data-tab="species"><span class="pill"><svg class="icon"><use href="#i-fish"/></svg></span>Species</button>
-    <button class="nav-item" data-tab="biggame"><span class="pill"><svg class="icon"><use href="#i-marlin"/></svg></span>Big game</button>
+    <button class="nav-item" data-tab="catches"><span class="pill"><svg class="icon"><use href="#i-hook"/></svg></span>Catches</button>
     <button class="nav-item" data-tab="reports"><span class="pill"><svg class="icon"><use href="#i-news"/></svg></span>Reports</button>
   </nav>
 
@@ -666,16 +683,16 @@ body.on-map footer{ display:none; }
       <!-- ============ SPECIES ============ -->
       <section class="panel" id="tab-species" aria-label="Species" hidden>
         <h2 class="section-title">Species</h2>
+        <div class="seg sp-view" role="group" aria-label="Species view"><button type="button" data-spv="inshore" aria-pressed="true">Inshore</button><button type="button" data-spv="biggame" aria-pressed="false">Big game</button></div>
+        <div id="spInshore">
         <p class="lede">The fish most often caught by recreational anglers in the Hauraki Gulf, Northland and Bay of Plenty (all in MPI’s Auckland &amp; Kermadec rules area), ranked by share of the recreational harvest. Size and bag limits are for the Auckland &amp; Kermadec area. Always check the <a href="https://www.mpi.govt.nz/fishing-aquaculture/recreational-fishing/fishing-rules/auckland-kermadec-fishing-rules/" target="_blank" rel="noopener">current MPI rules</a> or the free NZ Fishing Rules app before you keep a fish.</p>
         <div class="notices" id="ruleNotices"></div>
         <div class="chips" id="speciesFilter" role="group" aria-label="Filter species" style="margin-bottom:12px;"></div>
         <div class="heat-legend" aria-hidden="true"><span><i class="h0"></i>None</span><span><i class="h1"></i>Some</span><span><i class="h2"></i>Good</span><span><i class="h3"></i>Peak</span><span><i class="h0" style="box-shadow:inset 0 0 0 2px var(--ink)"></i>This month</span></div>
         <div class="species-grid" id="speciesGrid"></div>
-      </section>
-
-      <!-- ============ BIG GAME ============ -->
-      <section class="panel" id="tab-biggame" aria-label="Big game" hidden>
-        <h2 class="section-title">Big game migrations</h2>
+        </div>
+        <div id="spBigGame" hidden>
+        <h3 class="sub-h bg-title">Big game migrations</h3>
         <p class="lede">When pelagic gamefish pass through north-east New Zealand waters, from Three Kings to the Bay of Plenty. Most arrive on the warm East Auckland Current as the sea passes about 20&nbsp;°C.</p>
         <div class="grid two" style="margin-bottom:12px;">
           <div class="card" id="outlookCard"></div>
@@ -688,7 +705,15 @@ body.on-map footer{ display:none; }
           <p class="xsmall muted" style="margin:8px 0 0;">Ratings are built from charter, club and fishing-media season descriptions, not catch statistics. Tap a cell for the rating.</p>
         </div>
         <div class="bg-list" id="bgList"></div>
+              </div>
       </section>
+
+      <!-- ============ CATCHES ============ -->
+      <section class="panel" id="tab-catches" aria-label="Catches" hidden>
+        <h2 class="section-title">Catches</h2>
+        <div id="catchesView"></div>
+      </section>
+
 
       <!-- ============ REPORTS ============ -->
       <section class="panel" id="tab-reports" aria-label="Reports" hidden>
@@ -713,10 +738,11 @@ body.on-map footer{ display:none; }
             <li>Big game: <a href="https://www.fishing.net.nz/fishing-advice/gamefishing-species-guide/" target="_blank" rel="noopener">fishing.net.nz gamefish guide</a>; <a href="https://www.nzsportfishing.co.nz/fisheries/species/marlin/" target="_blank" rel="noopener">NZ Sport Fishing Council</a>; <a href="https://www.fishing.net.nz/fishing-advice/general-articles/how-does-el-nino-affect-fishing-in-new-zealand/" target="_blank" rel="noopener">El Niño and NZ fishing</a>; <a href="https://niwa.co.nz/climate-and-weather/seasonal-climate-outlook/seasonal-climate-outlook-september-november-2026" target="_blank" rel="noopener">NIWA outlook Sep–Nov 2026</a>.</li>
             <li>Map: <a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre GL JS</a> (BSD-3); base map <a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>; satellite imagery © Esri, Maxar, Earthstar Geographics. Not for navigation.</li>
             <li>Fish photos: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>; each photographer and licence is credited under the photo.</li>
+            <li>Catches and their photos are stored only on this device: use <b>Back up</b> on the Catches tab to keep a copy.</li>
             <li>Your spots, and any offline map you save, are stored only in this browser on this device. Offline map tiles © OpenFreeMap, OpenMapTiles, OpenStreetMap contributors.</li>
             <li>Pressure, ocean current: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (currents from Météo-France SMOC). Distances and bearings are from your phone’s GPS. Not for navigation.</li>
           </ul>
-          <p>Version 5.2 · built 3 October 2026. <button class="btn text" type="button" id="updBtn" hidden>Check for updates</button></p>
+          <p>Version 5.3 · built 3 October 2026. <button class="btn text" type="button" id="updBtn" hidden>Check for updates</button></p>
         </details>
       </footer>
     </main>
@@ -726,6 +752,29 @@ body.on-map footer{ display:none; }
 <dialog id="helpDlg" aria-labelledby="helpTitle">
   <div class="dlg-head"><h2 id="helpTitle">Connect an AI</h2><button class="icon-btn" id="helpClose" aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
   <div class="dlg-body" id="helpBody"></div>
+</dialog>
+<dialog id="catchDlg" aria-labelledby="catchTitle">
+  <form id="catchForm">
+    <div class="dlg-head"><h2 id="catchTitle">Log a catch</h2><button class="icon-btn" type="button" id="catchClose" aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <div class="dlg-body pin-form">
+      <div class="field"><label for="catchSpecies">Species</label><select id="catchSpecies" class="key-input"></select></div>
+      <div class="field" id="catchOtherRow" hidden><label for="catchOther">What was it?</label><input type="text" id="catchOther" maxlength="60" autocomplete="off"></div>
+      <div class="catch-size"><div class="field"><label for="catchLen">Length (cm)</label><input type="number" id="catchLen" min="1" max="500" step="0.5" inputmode="decimal"></div><div class="field"><label for="catchKg">Weight (kg)</label><input type="number" id="catchKg" min="0.1" max="999" step="0.1" inputmode="decimal"></div></div>
+      <div class="seg catch-kept" id="catchKept" role="group" aria-label="Kept or released"><button type="button" data-kept="kept" aria-pressed="true">Kept</button><button type="button" data-kept="released" aria-pressed="false">Released</button></div>
+      <p class="note warn" id="catchWarn" role="status" hidden></p>
+      <div class="field"><label for="catchSpot">Spot</label><select id="catchSpot" class="key-input"></select><span class="xsmall muted" id="catchGps" role="status"></span></div>
+      <label class="rule-row" id="catchSaveSpotRow" hidden><input type="checkbox" id="catchSaveSpot"> Save this place as a spot</label>
+      <div class="field"><label for="catchWhen">When</label><input type="datetime-local" id="catchWhen" class="key-input"></div>
+      <div class="field"><label for="catchPhoto">Photo (optional)</label><input type="file" id="catchPhoto" accept="image/*" capture="environment"><img id="catchPreview" class="catch-preview" alt="Catch photo preview" hidden><button class="btn text" type="button" id="catchPhotoRemove" hidden>Remove photo</button></div>
+      <div class="field"><label for="catchMethod">Method / bait (optional)</label><input type="text" id="catchMethod" maxlength="120" autocomplete="off" placeholder="e.g. 5 inch soft bait, pilchard"></div>
+      <div class="field"><label for="catchNotes">Notes (optional)</label><textarea id="catchNotes" maxlength="1000" rows="2"></textarea></div>
+      <div class="pin-actions"><button class="btn text" type="button" id="catchCancel">Cancel</button><button class="btn filled" type="submit">Save catch</button></div>
+    </div>
+  </form>
+</dialog>
+<dialog id="catchView" aria-labelledby="catchViewTitle">
+  <div class="dlg-head"><h2 id="catchViewTitle">Catch</h2><button class="icon-btn" type="button" id="catchViewClose" aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <div class="dlg-body" id="catchViewBody"></div>
 </dialog>
 <dialog id="pinDlg" aria-labelledby="pinTitle">
   <form id="pinForm">
@@ -795,16 +844,18 @@ function sstReason(sst, r){
   if(sst > r[2]) return t + ' too warm';
   return t + ' ok';
 }
-function likelyFor(pin, monthIdx, sst, species){
+function likelyFor(pin, monthIdx, sst, species, history){
   const W = LIKELY_WEIGHTS, tags = pin.habitats || [];
   const label = id => (HABITATS.find(h => h.id === id) || { label:id }).label.toLowerCase();
   return species.filter(s => !s.closed).map(s => {
     const hit = tags.filter(h => s.habitats.includes(h));
     let score = Math.round(W.season * s.season[monthIdx] / 3 + W.sst * sstFactor(sst, s.sst) + W.habitat * habitatFactor(pin, s));
     if(tags.length && !hit.length) score = Math.min(score, LIKELY_BANDS[0][0] - 1);   // wrong ground: at best Possible
+    const hist = history && history[s.id];
+    if(hist && hist.boost) score = Math.min(100, score + hist.boost);   // your own catches are evidence: added after the habitat gate
     const band = (LIKELY_BANDS.find(b => score >= b[0]) || [0, null])[1];
     const hab = !tags.length ? 'habitat not set' : hit.length ? hit.map(label).join(', ') + ' match' : 'no habitat match';
-    return { species:s, score, band, reason:[SEASON_REASON[s.season[monthIdx]], sstReason(sst, s.sst), hab].join(' · ') };
+    return { species:s, score, band, reason:[SEASON_REASON[s.season[monthIdx]], sstReason(sst, s.sst), hab].join(' · ') + (hist && hist.count ? ' · you’ve caught ' + hist.count + ' here' : '') };
   }).filter(r => r.band).sort((a, b) => b.score - a.score);
 }
 
@@ -1041,6 +1092,115 @@ function glyphUrls(style, template, ranges){
   stacks.forEach(s => ranges.forEach(r => out.push(template.replace('{fontstack}', encodeURIComponent(s)).replace('{range}', r))));
   return out;
 }
+
+/* ---- Catch log ---- */
+function nearestPinWithin(lat, lon, pins, km){
+  let best = null, bd = Infinity;
+  for(const p of pins){ const d = distKm(lat, lon, p.lat, p.lon); if(d < bd){ bd = d; best = p; } }
+  return best && bd <= km ? best : null;
+}
+function mlsCm(mls){ const m = /^\s*(\d+(?:\.\d+)?)\s*cm\b/i.exec(mls || ''); return m ? +m[1] : null; }
+function sizeWarning(o){
+  const min = mlsCm(o.mls);
+  return o.kept && min != null && o.lengthCm != null && o.lengthCm < min ? o.name + ' minimum is ' + min + ' cm: release it?' : null;
+}
+function conditionsAt(live, dateStr, hour){
+  const w = live && live.weather && live.weather.hourly, m = live && live.marine && live.marine.hourly, key = dateStr + 'T' + String(hour).padStart(2, '0') + ':00';
+  const wi = w && w.time ? w.time.indexOf(key) : -1;
+  if(wi < 0) return null;
+  const mi = m && m.time ? m.time.indexOf(key) : -1, kt = v => v == null ? null : Math.round(v / 1.852 * 10) / 10;
+  return { windKt:kt(w.wind_speed_10m[wi]), gustKt:kt(w.wind_gusts_10m ? w.wind_gusts_10m[wi] : null), windDir:w.wind_direction_10m ? w.wind_direction_10m[wi] : null,
+    waveM:mi >= 0 && m.wave_height ? m.wave_height[mi] : null, sstC:mi >= 0 && m.sea_surface_temperature ? m.sea_surface_temperature[mi] : null };
+}
+/* Your own catches at a spot: recent same-season ones count most; capped at +10. */
+function catchBoost(catches, pinId, speciesId, nowMs, monthIdx){
+  let s = 0;
+  catches.forEach(c => {
+    if(c.pinId !== pinId || c.species !== speciesId) return;
+    const age = (nowMs - Date.parse(c.at)) / 864e5, m = nzMonthOf(c.at), dm = Math.min(Math.abs(m - monthIdx), 12 - Math.abs(m - monthIdx));
+    s += age <= 365 && dm <= 1 ? 3 : age <= 730 ? 1.5 : 0.5;
+  });
+  return Math.min(10, Math.round(s));
+}
+function historyFor(catches, pinId, nowMs, monthIdx){
+  const out = {};
+  catches.forEach(c => { if(c.pinId === pinId && c.species !== 'other') (out[c.species] = out[c.species] || { boost:0, count:0 }).count++; });
+  Object.keys(out).forEach(k => { out[k].boost = catchBoost(catches, pinId, k, nowMs, monthIdx); });
+  return out;
+}
+function personalBests(catches){
+  const out = {};
+  catches.forEach(c => {
+    const b = out[c.species] = out[c.species] || { longest:null, heaviest:null };
+    if(c.lengthCm != null && (!b.longest || c.lengthCm > b.longest.lengthCm)) b.longest = c;
+    if(c.weightKg != null && (!b.heaviest || c.weightKg > b.heaviest.weightKg)) b.heaviest = c;
+  });
+  return out;
+}
+function catchPatterns(catches, speciesId){
+  const list = catches.filter(c => c.species === speciesId), months = new Array(12).fill(0);
+  let withTide = 0, incoming = 0, withWind = 0, under12 = 0;
+  list.forEach(c => {
+    months[nzMonthOf(c.at)]++;
+    if(c.cond && c.cond.tide){ withTide++; if(c.cond.tide.state === 'incoming') incoming++; }
+    if(c.cond && c.cond.windKt != null){ withWind++; if(c.cond.windKt < 12) under12++; }
+  });
+  return { n:list.length, withTide, incoming, withWind, under12, bestMonth:list.length ? months.indexOf(Math.max(...months)) : null };
+}
+function csvCell(v){ if(v == null) return ''; const s = String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function catchesCsv(catches, nameOf, spotOf){
+  const head = ['date', 'species', 'length_cm', 'weight_kg', 'kept', 'spot', 'lat', 'lon', 'wind_kt', 'wind_dir', 'tide', 'sea_m', 'sst_c', 'method', 'notes'];
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const rows = catches.slice().sort((a, b) => a.at < b.at ? -1 : 1).map(c => {
+    const k = c.cond || {};
+    return [c.at, c.species === 'other' ? (c.otherName || 'Other') : nameOf(c.species), c.lengthCm, c.weightKg, c.kept ? 'kept' : 'released', spotOf(c), c.lat, c.lon,
+      k.windKt != null ? Math.round(k.windKt) : '', k.windDir != null ? dirs[Math.round(k.windDir / 22.5) % 16] : '', k.tide ? k.tide.state : '', k.waveM, k.sstC, c.method, c.notes].map(csvCell).join(',');
+  });
+  return [head.join(',')].concat(rows).join('\n') + '\n';
+}
+function mergeById(existing, incoming){
+  const map = new Map(existing.map(x => [x.id, x])); let added = 0, updated = 0;
+  incoming.forEach(x => {
+    if(!x || !x.id) return;
+    const cur = map.get(x.id);
+    if(!cur){ map.set(x.id, x); added++; }
+    else if((x.updated || '') > (cur.updated || '')){ map.set(x.id, x); updated++; }
+  });
+  return { merged:[...map.values()], added, updated };
+}
+/* A catch from storage or a backup file, cleaned: typed numbers, capped strings, known values only. */
+function normalizeCatch(raw){
+  if(!raw || typeof raw !== 'object' || !raw.id || !raw.at || !raw.species) return null;
+  const t = Date.parse(raw.at); if(!Number.isFinite(t)) return null;
+  const num = v => v === '' || v == null || typeof v === 'object' || !Number.isFinite(+v) ? null : +v;
+  const pos = v => { const n = num(v); return n != null && n > 0 ? Math.round(n * 10) / 10 : null; };
+  const str = (v, n) => v == null || typeof v === 'object' ? '' : String(v).slice(0, n);
+  const iso = v => Number.isFinite(Date.parse(v)) ? new Date(Date.parse(v)).toISOString() : new Date(t).toISOString();
+  const obj = v => v && typeof v === 'object' ? v : null, k = obj(raw.cond);
+  return { id:str(raw.id, 40), at:new Date(t).toISOString(), species:str(raw.species, 40), otherName:str(raw.otherName, 60),
+    lengthCm:pos(raw.lengthCm), weightKg:pos(raw.weightKg),
+    kept:!(raw.kept === false || raw.kept === 0 || raw.kept === 'released' || raw.kept === 'no' || raw.kept == null),
+    method:str(raw.method, 120), notes:str(raw.notes, 1000), pinId:raw.pinId == null || raw.pinId === '' ? null : str(raw.pinId, 40),
+    lat:(n => n != null && n >= -90 && n <= 90 ? n : null)(num(raw.lat)), lon:(n => n != null && n >= -180 && n <= 180 ? n : null)(num(raw.lon)),
+    hasPhoto:!!raw.hasPhoto, created:iso(raw.created), updated:iso(raw.updated),
+    cond:!k ? null : { windKt:num(k.windKt), gustKt:num(k.gustKt), windDir:num(k.windDir), waveM:num(k.waveM), sstC:num(k.sstC),
+      pressure:obj(k.pressure) ? { from:num(k.pressure.from), to:num(k.pressure.to), delta:num(k.pressure.delta) } : null,
+      tide:obj(k.tide) ? { port:str(k.tide.port, 40), state:['incoming', 'outgoing', 'slack'].includes(k.tide.state) ? k.tide.state : null } : null,
+      moon:obj(k.moon) ? { phase:num(k.moon.phase), name:str(k.moon.name, 40) } : null,
+      bite:['major', 'minor'].includes(k.bite) ? k.bite : null } };
+}
+/* Only small base64 images from a backup are restored; anything else (remote URLs, HTML, huge strings) is dropped. */
+function safeImageDataUrl(u, maxLen){ return typeof u === 'string' && u.length <= maxLen && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u); }
+function nzMonthOf(iso){ return +new Intl.DateTimeFormat('en-NZ', { timeZone:'Pacific/Auckland', month:'numeric' }).format(new Date(iso)) - 1; }
+/* A GPS fix or photo that arrives late only applies to the same, still-open form, and never over the user's own choice. */
+function lateResultApplies(o){ return o.token === o.current && o.open && !o.touched; }
+function catchPosition(o){
+  if(o.pin) return { lat:o.pin.lat, lon:o.pin.lon };
+  if(o.edit && !o.spotChanged && o.edit.lat != null) return { lat:o.edit.lat, lon:o.edit.lon };   // editing keeps where it was caught
+  return o.gps || o.live || (o.edit && o.edit.lat != null ? { lat:o.edit.lat, lon:o.edit.lon } : null);
+}
+function keepCond(old, snap){ return snap != null ? snap : old; }   // a re-snapshot with no forecast never wipes saved conditions
+function validBackup(o){ return !!o && o.app === 'gulf-fishing-planner' && o.kind === 'backup' && o.version === 1 && Array.isArray(o.pins) && Array.isArray(o.catches); }
 </script>
 <script id="species-data">
 /* Gulf species. sst = [min, ideal, max] °C; depth = [min, max] m; habitats from HABITATS. */
@@ -2673,6 +2833,305 @@ function drawStaticMarkers(){
     new maplibregl.Marker({ element:el }).setLngLat([s[1], s[0]]).addTo(MAP);
   });
 }
+/* ---- Catch log storage (IndexedDB; in-memory fallback) ---- */
+let CATCHES = [], CATCH_DB = null, CATCH_MEM = false, CATCH_READY = null;
+function idb(){ return CATCH_DB || (CATCH_DB = new Promise((ok, fail) => {
+  try{ const rq = indexedDB.open('gfp', 1);
+    rq.onupgradeneeded = () => { const db = rq.result; if(!db.objectStoreNames.contains('catches')) db.createObjectStore('catches', { keyPath:'id' }); if(!db.objectStoreNames.contains('photos')) db.createObjectStore('photos', { keyPath:'id' }); };
+    rq.onsuccess = () => ok(rq.result); rq.onerror = () => fail(rq.error); rq.onblocked = () => fail(new Error('blocked'));
+  }catch(e){ fail(e); } })); }
+function idbReq(store, mode, fn){ return idb().then(db => new Promise((ok, fail) => { const tx = db.transaction(store, mode), r = fn(tx.objectStore(store)); tx.oncomplete = () => ok(r && r.result); tx.onerror = () => fail(tx.error); tx.onabort = () => fail(tx.error); })); }
+function loadCatches(){
+  return CATCH_READY || (CATCH_READY = idbReq('catches', 'readonly', s => s.getAll()).then(list => { CATCHES = (list || []).map(normalizeCatch).filter(Boolean); scheduleBest(); return CATCHES; })
+    .catch(() => { CATCH_MEM = true; snack('This browser won’t save catches, so they’ll be gone when you close the app.'); return CATCHES; }));
+}
+async function saveCatch(c, photo){
+  const before = CATCHES;
+  CATCHES = CATCHES.filter(x => x.id !== c.id).concat([c]);
+  scheduleBest();
+  if(CATCH_MEM){ if(photo) MEM_PHOTOS[c.id] = Object.assign({ id:c.id }, photo); return; }
+  try{ await idbReq('catches', 'readwrite', s => s.put(c)); }
+  catch(err){ CATCHES = before; scheduleBest(); throw err; }   // the caller tells the user; memory matches storage
+  if(photo) await idbReq('photos', 'readwrite', s => s.put(Object.assign({ id:c.id }, photo))).catch(() => snack('Not enough space to save this photo. The catch is saved.'));
+}
+const MEM_PHOTOS = {};
+async function removePhoto(id){ delete MEM_PHOTOS[id]; if(!CATCH_MEM) await idbReq('photos', 'readwrite', s => s.delete(id)).catch(() => {}); }
+async function deleteCatch(id){
+  CATCHES = CATCHES.filter(x => x.id !== id); delete MEM_PHOTOS[id]; scheduleBest();
+  if(CATCH_MEM) return;
+  await idbReq('catches', 'readwrite', s => s.delete(id)); await idbReq('photos', 'readwrite', s => s.delete(id));
+}
+function getPhoto(id){ return CATCH_MEM ? Promise.resolve(MEM_PHOTOS[id] || null) : idbReq('photos', 'readonly', s => s.get(id)).catch(() => null); }
+/* Shrink a phone photo: ≤1280 px JPEG for viewing, 240 px thumbnail for lists. */
+async function compressPhoto(file){
+  const bmp = file.size > 3e6 ? await createImageBitmap(file, { resizeWidth:1600, resizeQuality:'high' }).catch(() => createImageBitmap(file)) : await createImageBitmap(file);   // big phone photos: don't decode at full size
+  const shot = (max, q) => { const k = Math.min(1, max / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise(r => c.toBlob(r, 'image/jpeg', q)); };
+  const full = await shot(1280, 0.72), thumb = await shot(240, 0.6);
+  if(bmp.close) bmp.close();
+  return { full, thumb };
+}
+/* Conditions at the moment of a catch, kept with it for good. */
+function snapshotConditions(pin, lat, lon, when){
+  const parts = nzParts(when), dateStr = parts.date, hour = Math.floor(parts.min / 60);
+  const own = pin && PIN_LIVE[pin.id] && !PIN_LIVE[pin.id].error ? PIN_LIVE[pin.id] : null;
+  const area = own ? null : areaLive(nearestPoint(lat, lon, MAP_AREAS));
+  const live = own || (area && !area.error ? area : null);
+  const c = conditionsAt(live, dateStr, hour);
+  if(!c) return null;
+  const tp = tidePortFor(lat, lon, dateStr), min = parts.min, st = tideStateAt(dateStr, min, tp.port);
+  const ctx = dayContext(dateStr, { lat, lon, port:tp.port }), win = ctx.wins.find(w => min >= w.s && min <= w.e);
+  const ill = moonIllumination(when);
+  return Object.assign(c, { pressure:pressureTrend(live.weather, dateStr),
+    tide:st ? { port:TIDE_PORTS[tp.port].name, state:st.sinceChange < 30 || st.toChange < 30 ? 'slack' : st.rising ? 'incoming' : 'outgoing' } : null,
+    moon:{ phase:Math.round(ill.phase * 100) / 100, name:moonPhaseName(ill.phase) }, bite:win ? win.type : null });
+}
+function catchSpeciesName(id, other){
+  if(id === 'other') return other || 'Other';
+  const s = SPECIES.concat(BIG_GAME).find(x => x.id === id);
+  return s ? s.name : id;
+}
+/* ---- Log / edit a catch ---- */
+let CATCH_EDIT = null, CATCH_POS = null, CATCH_PHOTO = null, CATCH_URL = null, CATCH_SEQ = 0, CATCH_TOUCHED = false, CATCH_PHOTO_REMOVE = false;
+const toLocalInput = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+function updateCatchWarn(){
+  const id = $('catchSpecies').value, s = SPECIES.concat(BIG_GAME).find(x => x.id === id), lim = s && limitsFor(s, 'AK');
+  const w = sizeWarning({ kept:$('catchKept').querySelector('[aria-pressed="true"]').dataset.kept === 'kept', lengthCm:$('catchLen').value === '' ? null : +$('catchLen').value, mls:lim && lim.mls, name:s ? s.name : '' });
+  $('catchWarn').hidden = !w; $('catchWarn').textContent = w || '';
+  $('catchOtherRow').hidden = id !== 'other';
+}
+function setCatchPreview(blob){
+  if(CATCH_URL){ URL.revokeObjectURL(CATCH_URL); CATCH_URL = null; }
+  const img = $('catchPreview');
+  if(!blob){ img.hidden = true; img.removeAttribute('src'); return; }
+  CATCH_URL = URL.createObjectURL(blob); img.src = CATCH_URL; img.hidden = false;
+}
+function openCatchForm(o){
+  o = o || {};
+  const c = o.catchObj || null, pins = loadPins(), opt = s => '<option value="' + s.id + '">' + esc(s.name) + '</option>';
+  CATCH_EDIT = c; CATCH_POS = null; CATCH_PHOTO = null; CATCH_TOUCHED = false; CATCH_PHOTO_REMOVE = false;
+  const token = ++CATCH_SEQ;
+  $('catchTitle').textContent = c ? 'Edit catch' : 'Log a catch';
+  $('catchSpecies').innerHTML = '<optgroup label="Inshore">' + SPECIES.map(opt).join('') + '</optgroup><optgroup label="Big game">' + BIG_GAME.map(opt).join('') + '</optgroup><option value="other">Other…</option>';
+  $('catchSpot').innerHTML = pins.map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('') + '<option value="">Not at a saved spot</option>';
+  if(c && c.species !== 'other' && !SPECIES.concat(BIG_GAME).some(x => x.id === c.species))   // keep an unknown species rather than silently changing it
+    $('catchSpecies').insertAdjacentHTML('beforeend', '<option value="' + esc(c.species) + '">' + esc(c.species) + '</option>');
+  if(c && c.pinId && !pins.some(p => p.id === c.pinId))   // its spot was deleted: keep the link and the stored position
+    $('catchSpot').insertAdjacentHTML('afterbegin', '<option value="' + esc(c.pinId) + '">Deleted spot</option>');
+  $('catchSpecies').value = c ? c.species : 'snapper';
+  $('catchOther').value = c && c.otherName || '';
+  $('catchLen').value = c && c.lengthCm != null ? c.lengthCm : '';
+  $('catchKg').value = c && c.weightKg != null ? c.weightKg : '';
+  const kept = c ? c.kept : true;
+  $('catchKept').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.kept === 'kept') === kept)));
+  $('catchMethod').value = c && c.method || ''; $('catchNotes').value = c && c.notes || '';
+  $('catchWhen').value = toLocalInput(c ? new Date(c.at) : new Date());
+  const pre = c ? (c.pinId || '') : (o.pinId || SEL_PIN || '');
+  $('catchSpot').value = pins.some(p => p.id === pre) || (c && c.pinId === pre) ? pre : '';
+  $('catchSaveSpotRow').hidden = true; $('catchSaveSpot').checked = false; $('catchGps').textContent = '';
+  $('catchPhoto').value = ''; setCatchPreview(null);
+  $('catchPhotoRemove').hidden = !(c && c.hasPhoto);
+  if(c && c.hasPhoto) getPhoto(c.id).then(ph => { if(ph && token === CATCH_SEQ) setCatchPreview(ph.thumb || ph.full); });
+  updateCatchWarn();
+  $('catchDlg').showModal(); $('catchSpecies').focus();
+  if(!c && !o.pinId && navigator.geolocation){
+    $('catchGps').textContent = 'Finding your position…';
+    navigator.geolocation.getCurrentPosition(pos => {
+      if(token !== CATCH_SEQ || !$('catchDlg').open) return;   // a later form, or this one closed
+      CATCH_POS = { lat:pos.coords.latitude, lon:pos.coords.longitude };
+      if(!lateResultApplies({ token, current:CATCH_SEQ, open:true, touched:CATCH_TOUCHED })){ $('catchGps').textContent = ''; return; }   // the user already chose a spot
+      const near = nearestPinWithin(CATCH_POS.lat, CATCH_POS.lon, loadPins(), 1.852);
+      if(near){ $('catchSpot').value = near.id; $('catchGps').textContent = 'You’re at ' + near.name + '.'; }
+      else { $('catchSpot').value = ''; $('catchSaveSpotRow').hidden = false; $('catchGps').textContent = 'Not within 1 nm of a saved spot.'; }
+    }, () => { if(token === CATCH_SEQ) $('catchGps').textContent = ''; }, { enableHighAccuracy:true, timeout:10000, maximumAge:60000 });
+  }
+}
+async function onCatchPhoto(){
+  const f = $('catchPhoto').files[0]; if(!f) return;
+  const token = CATCH_SEQ, save = $('catchForm').querySelector('[type=submit]');
+  $('catchGps').textContent = 'Preparing photo…'; save.disabled = true;   // don't save until the photo is ready
+  try{
+    const ph = await compressPhoto(f);
+    if(token !== CATCH_SEQ) return;   // that form has gone: don't attach it to another catch
+    CATCH_PHOTO = ph; CATCH_PHOTO_REMOVE = false; setCatchPreview(ph.thumb); $('catchGps').textContent = '';
+  }catch(e){ if(token === CATCH_SEQ){ CATCH_PHOTO = null; $('catchGps').textContent = ''; snack('Couldn’t read that photo. The catch can still be saved.'); } }
+  finally{ if(token === CATCH_SEQ) save.disabled = false; }
+}
+async function submitCatch(e){
+  e.preventDefault();
+  const pins = loadPins(), pinId = $('catchSpot').value || null, pin = pinId ? pins.find(p => p.id === pinId) : null;
+  const when = $('catchWhen').value ? new Date($('catchWhen').value) : new Date();
+  const pos = catchPosition({ pin, edit:CATCH_EDIT, spotChanged:CATCH_TOUCHED, gps:CATCH_POS, live:POS ? { lat:POS.lat, lon:POS.lon } : null });
+  let usePin = pin ? pin.id : (pinId && CATCH_EDIT && CATCH_EDIT.pinId === pinId ? pinId : null);   // a deleted spot stays linked
+  if(!pin && pos && $('catchSaveSpot').checked){
+    const np = upsertPin({ name:'Catch spot ' + when.toLocaleDateString('en-NZ', { day:'numeric', month:'short' }), lat:pos.lat, lon:pos.lon });
+    if(np){ usePin = np.id; drawPinMarkers(); }
+  }
+  const now = new Date().toISOString(), num = v => v === '' || v == null || !Number.isFinite(+v) || +v <= 0 ? null : Math.round(+v * 10) / 10;
+  const species = $('catchSpecies').value;
+  const c = Object.assign({}, CATCH_EDIT || { id:'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created:now, hasPhoto:false, cond:null }, {
+    at:when.toISOString(), species, otherName:species === 'other' ? $('catchOther').value.trim().slice(0, 60) : '',
+    lengthCm:num($('catchLen').value), weightKg:num($('catchKg').value),
+    kept:$('catchKept').querySelector('[aria-pressed="true"]').dataset.kept === 'kept',
+    method:$('catchMethod').value.trim().slice(0, 120), notes:$('catchNotes').value.slice(0, 1000),
+    pinId:usePin, lat:pos ? pos.lat : null, lon:pos ? pos.lon : null, updated:now });
+  const moved = !CATCH_EDIT || CATCH_EDIT.at !== c.at || CATCH_EDIT.pinId !== c.pinId;
+  if(moved){ const snap = pos ? snapshotConditions(usePin ? loadPins().find(p => p.id === usePin) : null, pos.lat, pos.lon, when) : null; c.cond = CATCH_EDIT ? keepCond(CATCH_EDIT.cond, snap) : snap; }
+  if(CATCH_PHOTO) c.hasPhoto = true;
+  else if(CATCH_PHOTO_REMOVE) c.hasPhoto = false;
+  try{ await saveCatch(c, CATCH_PHOTO); }
+  catch(err){ snack('Couldn’t save this catch: storage on this device is full or blocked.'); return; }
+  if(!CATCH_PHOTO && CATCH_PHOTO_REMOVE) await removePhoto(c.id);
+  $('catchDlg').close(); setCatchPreview(null);
+  snack((CATCH_EDIT ? 'Catch updated: ' : 'Logged: ') + catchSpeciesName(c.species, c.otherName) + (c.lengthCm ? ' ' + c.lengthCm + ' cm' : ''));
+  if(window.renderCatches) renderCatches();
+  if(SEL_PIN){ const sp = loadPins().find(p => p.id === SEL_PIN); if(sp && $('spotBody')) openSpot(sp.id); }
+}
+function setupCatchForm(){
+  $('catchForm').addEventListener('submit', submitCatch);
+  $('catchClose').addEventListener('click', () => $('catchDlg').close());
+  $('catchCancel').addEventListener('click', () => $('catchDlg').close());
+  $('catchPhoto').addEventListener('change', onCatchPhoto);
+  $('catchSpot').addEventListener('change', () => { CATCH_TOUCHED = true; });
+  $('catchPhotoRemove').addEventListener('click', () => { CATCH_PHOTO = null; CATCH_PHOTO_REMOVE = true; $('catchPhoto').value = ''; setCatchPreview(null); $('catchPhotoRemove').hidden = true; });
+  $('catchDlg').addEventListener('close', () => { CATCH_SEQ++; setCatchPreview(null); $('catchForm').querySelector('[type=submit]').disabled = false; });   // free the preview; ignore late results
+  ['catchSpecies', 'catchLen'].forEach(id => { $(id).addEventListener('input', updateCatchWarn); $(id).addEventListener('change', updateCatchWarn); });
+  $('catchKept').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; $('catchKept').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); updateCatchWarn(); });
+}
+/* ---- Catches tab ---- */
+let CATCH_FILTER = 'all', CATCH_URLS = [];
+const MONTHS3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function catchSpotName(c, pins){
+  if(!c.pinId) return 'GPS point';
+  const p = (pins || loadPins()).find(x => x.id === c.pinId);
+  return p ? p.name : 'Deleted spot';
+}
+const fixed = (v, d) => typeof v === 'number' && Number.isFinite(v) ? v.toFixed(d) : null;
+function condLine(k){
+  if(!k) return 'Conditions not recorded';
+  return [k.windKt != null ? Math.round(k.windKt) + ' kt ' + windDirLabel(k.windDir) : '', k.tide ? k.tide.state : '', fixed(k.sstC, 0) != null ? fixed(k.sstC, 0) + ' °C' : ''].filter(Boolean).join(' · ');
+}
+function sizeText(c){ return [c.lengthCm ? c.lengthCm + ' cm' : '', c.weightKg ? c.weightKg + ' kg' : ''].filter(Boolean).join(' · '); }
+function renderCatches(){
+  const el = $('catchesView'); if(!el) return;
+  CATCH_URLS.forEach(u => URL.revokeObjectURL(u)); CATCH_URLS = [];
+  const pins = loadPins(), all = CATCHES.slice().sort((a, b) => a.at < b.at ? 1 : -1);
+  const name = c => catchSpeciesName(c.species, c.otherName);
+  if(!all.length){
+    el.innerHTML = '<div class="card"><p class="muted" style="margin:0 0 12px;">No catches yet. Log one from a spot card or here.</p><button class="btn filled" type="button" id="catchAdd">' + icon('hook') + ' Log catch</button></div>' + backupHTML();
+    $('catchAdd').addEventListener('click', () => openCatchForm({}));
+    wireBackup(); return;
+  }
+  const species = [...new Set(all.map(c => c.species))], kept = all.filter(c => c.kept).length;
+  const pb = personalBests(all), top = species.map(id => [id, all.filter(c => c.species === id).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const pat = catchPatterns(all, top), patTxt = [pat.withTide ? pat.incoming + ' of ' + pat.withTide + ' on an incoming tide' : '', pat.withWind ? pat.under12 + ' of ' + pat.withWind + ' under 12 kt' : '', pat.bestMonth != null && pat.n > 2 ? 'best month ' + MONTHS3[pat.bestMonth] : ''].filter(Boolean).join(' · ');
+  const pbRows = species.filter(id => pb[id] && (pb[id].longest || pb[id].heaviest)).map(id => '<div class="row"><span class="k">' + esc(catchSpeciesName(id, (all.find(c => c.species === id) || {}).otherName)) + '</span><span class="v">'
+    + esc([pb[id].longest ? pb[id].longest.lengthCm + ' cm' : '', pb[id].heaviest ? pb[id].heaviest.weightKg + ' kg' : ''].filter(Boolean).join(' · ')) + '</span></div>').join('');
+  const chips = [['all', 'All']].concat(species.map(id => ['sp:' + id, catchSpeciesName(id, (all.find(c => c.species === id) || {}).otherName)]))
+    .concat((n => [...new Set(all.map(c => c.pinId).filter(Boolean))].map(id => { const nm = catchSpotName({ pinId:id }, pins); return ['pin:' + id, nm === 'Deleted spot' ? 'Deleted spot ' + (++n) : nm]; }))(0));
+  if(!chips.some(c => c[0] === CATCH_FILTER)) CATCH_FILTER = 'all';
+  const shown = all.filter(c => CATCH_FILTER === 'all' || (CATCH_FILTER.startsWith('sp:') ? c.species === CATCH_FILTER.slice(3) : c.pinId === CATCH_FILTER.slice(4)));
+  el.innerHTML = '<div class="card catch-stats"><div class="catch-totals"><div><b>' + all.length + '</b><span>catches</span></div><div><b>' + species.length + '</b><span>species</span></div><div><b>' + kept + '/' + (all.length - kept) + '</b><span>kept/released</span></div></div>'
+      + (pbRows ? '<h3 class="sub-h">Personal bests</h3><div class="rows">' + pbRows + '</div>' : '')
+      + (patTxt ? '<p class="small catch-pattern"><b>Your ' + esc(catchSpeciesName(top).toLowerCase()) + ':</b> ' + esc(patTxt) + '</p>' : '')
+    + '</div>'
+    + '<div class="catch-bar"><button class="btn filled" type="button" id="catchAdd">' + icon('hook') + ' Log catch</button></div>'
+    + '<div class="chips catch-chips" role="group" aria-label="Filter catches">' + chips.map(([k, l]) => '<button class="chip" type="button" data-cf="' + esc(k) + '" aria-pressed="' + (k === CATCH_FILTER) + '">' + esc(l) + '</button>').join('') + '</div>'
+    + '<ul class="lf catch-list">' + shown.map(c => '<li><button type="button" class="lf-row" data-cid="' + esc(c.id) + '">'
+        + '<span class="lf-thumb" data-thumb="' + (c.hasPhoto ? esc(c.id) : '') + '">' + icon('fish') + '</span>'
+        + '<span class="lf-main"><span class="lf-name">' + esc(name(c)) + (sizeText(c) ? ' <span class="muted small">' + esc(sizeText(c)) + '</span>' : '') + '</span>'
+        + '<span class="xsmall muted">' + esc(catchSpotName(c, pins)) + ' · ' + esc(new Date(c.at).toLocaleString('en-NZ', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' })) + '</span>'
+        + '<span class="xsmall">' + esc(condLine(c.cond)) + '</span></span>'
+        + '<span class="lf-score ' + (c.kept ? 'likely' : 'possible') + '">' + (c.kept ? 'Kept' : 'Released') + '</span></button></li>').join('') + '</ul>'
+    + backupHTML();
+  $('catchAdd').addEventListener('click', () => openCatchForm({}));
+  el.querySelectorAll('[data-cf]').forEach(b => b.addEventListener('click', () => { CATCH_FILTER = b.dataset.cf; renderCatches(); }));
+  el.querySelectorAll('[data-cid]').forEach(b => b.addEventListener('click', () => openCatchView(b.dataset.cid)));
+  el.querySelectorAll('[data-thumb]').forEach(t => { if(!t.dataset.thumb) return; getPhoto(t.dataset.thumb).then(ph => { if(!ph || !ph.thumb) return; const u = URL.createObjectURL(ph.thumb); CATCH_URLS.push(u); t.insertAdjacentHTML('beforeend', '<img alt="" src="' + u + '">'); }); });
+  wireBackup();
+}
+let VIEW_URL = null;
+async function openCatchView(id){
+  const c = CATCHES.find(x => x.id === id); if(!c) return;
+  const k = c.cond, row = (a, b) => b ? '<div class="row"><span class="k">' + a + '</span><span class="v">' + esc(b) + '</span></div>' : '';
+  $('catchViewTitle').textContent = catchSpeciesName(c.species, c.otherName);
+  $('catchViewBody').innerHTML = '<div class="catch-photo" id="catchViewPhoto"></div><div class="rows">'
+    + row('When', new Date(c.at).toLocaleString('en-NZ', { weekday:'short', day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }))
+    + row('Spot', catchSpotName(c)) + row('Size', sizeText(c)) + row('Kept', c.kept ? 'Kept' : 'Released') + row('Method', c.method) + row('Notes', c.notes) + '</div>'
+    + '<h3 class="sub-h">Conditions</h3>' + (k ? '<div class="rows">'
+      + row('Wind', k.windKt != null ? Math.round(k.windKt) + ' kt ' + windDirLabel(k.windDir) + (k.gustKt != null ? ', gusts ' + Math.round(k.gustKt) : '') : '')
+      + row('Sea', fixed(k.waveM, 1) != null ? fixed(k.waveM, 1) + ' m' : '') + row('Water temp', fixed(k.sstC, 1) != null ? fixed(k.sstC, 1) + ' °C' : '')
+      + row('Tide', k.tide ? k.tide.state + ' (' + k.tide.port + ')' : '') + row('Moon', k.moon ? k.moon.name : '')
+      + row('Pressure', k.pressure ? pressureLine(Object.assign({ nudge:0 }, k.pressure)).replace('Pressure ', '') : '') + row('Bite window', k.bite ? k.bite + ' bite' : 'outside bite windows')
+      + '</div>' : '<p class="muted small">Conditions not recorded.</p>')
+    + '<div class="spot-actions" style="margin-top:14px;"><button class="btn tonal" type="button" id="catchEdit">' + icon('edit') + ' Edit</button><button class="btn text" type="button" id="catchDel">' + icon('trash') + ' Delete</button></div>';
+  $('catchEdit').addEventListener('click', () => { $('catchView').close(); openCatchForm({ catchObj:c }); });
+  $('catchDel').addEventListener('click', async () => {
+    if(!confirm('Delete this ' + catchSpeciesName(c.species, c.otherName) + ' catch?')) return;
+    await deleteCatch(c.id); $('catchView').close(); renderCatches(); snack('Catch deleted.');
+  });
+  $('catchView').showModal();
+  if(c.hasPhoto){ const ph = await getPhoto(c.id); if(ph && ph.full){ if(VIEW_URL) URL.revokeObjectURL(VIEW_URL); VIEW_URL = URL.createObjectURL(ph.full); $('catchViewPhoto').innerHTML = '<img alt="Photo of the catch" src="' + VIEW_URL + '">'; } }
+}
+/* ---- Backup, restore, CSV: everything lives on this device, so make keeping a copy easy ---- */
+function backupHTML(){
+  return '<div class="card tonal catch-backup"><h3>Keep a copy</h3><p class="small muted">Catches, photos and spots are stored only on this device. Save a backup file (to Drive or email) and restore it on any phone.</p>'
+    + '<div class="spot-actions"><button class="btn tonal" type="button" id="bkSave">' + icon('download') + ' Back up</button><button class="btn outlined" type="button" id="bkRestore">Restore</button><button class="btn text" type="button" id="bkCsv">Export CSV</button></div>'
+    + '<input type="file" id="bkFile" accept="application/json,.json" hidden></div>';
+}
+function downloadBlob(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const blobToDataURL = b => new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => fail(r.error); r.readAsDataURL(b); });
+async function makeBackup(){
+  const photos = [];
+  for(const c of CATCHES.filter(x => x.hasPhoto)){
+    const ph = await getPhoto(c.id);
+    if(ph) photos.push({ id:c.id, full:ph.full ? await blobToDataURL(ph.full) : null, thumb:ph.thumb ? await blobToDataURL(ph.thumb) : null });
+  }
+  return { app:'gulf-fishing-planner', kind:'backup', version:1, exportedAt:new Date().toISOString(), pins:loadPins(), catches:CATCHES, photos };
+}
+async function restoreBackup(obj){
+  if(!validBackup(obj)){ snack('That file isn’t a Gulf Fishing backup. Nothing was changed.'); return null; }
+  const have = new Set(loadPins().map(p => p.id)), newPins = obj.pins.filter(p => p && p.id && !have.has(p.id));
+  const r = mergeById(CATCHES, obj.catches.map(normalizeCatch).filter(Boolean));
+  if(!r.added && !r.updated && !newPins.length){ snack('Nothing new in that backup.'); return { added:0, updated:0, spots:0 }; }
+  if(!confirm('Add ' + r.added + ' catch' + (r.added === 1 ? '' : 'es') + (r.updated ? ', update ' + r.updated : '') + ' and ' + newPins.length + ' spot' + (newPins.length === 1 ? '' : 's') + '? Existing items are kept.')) return null;
+  newPins.forEach(p => upsertPin(p));
+  const MAX = 3e6, photos = new Map((Array.isArray(obj.photos) ? obj.photos : []).filter(p => p && p.id).map(p => [String(p.id), p]));
+  const toBlob = async u => safeImageDataUrl(u, MAX) ? (await fetch(u)).blob() : null;   // only embedded images; never a remote URL
+  let failed = 0;
+  for(const c of r.merged){
+    if(CATCHES.includes(c)) continue;   // unchanged
+    try{
+      const ph = photos.get(c.id), full = ph ? await toBlob(ph.full) : null;
+      if(!full) c.hasPhoto = false;
+      await saveCatch(c, full ? { full, thumb:(ph && await toBlob(ph.thumb)) || full } : null);
+    }catch(err){ failed++; }
+  }
+  drawPinMarkers(); renderCatches();
+  snack('Restored ' + (r.added + r.updated - failed) + ' catch' + (r.added + r.updated - failed === 1 ? '' : 'es') + ' and ' + newPins.length + ' spot' + (newPins.length === 1 ? '' : 's') + (failed ? '. ' + failed + ' couldn’t be saved.' : '.'));
+  return { added:r.added, updated:r.updated, spots:newPins.length };
+}
+function wireBackup(){
+  const s = $('bkSave'); if(!s) return;
+  s.addEventListener('click', async () => {
+    s.disabled = true;
+    try{ downloadBlob(new Blob([JSON.stringify(await makeBackup())], { type:'application/json' }), 'gulf-fishing-backup-' + todayNZ() + '.json'); snack('Backup saved. Keep it somewhere safe, like Drive or email.'); }
+    finally{ s.disabled = false; }
+  });
+  $('bkRestore').addEventListener('click', () => $('bkFile').click());
+  $('bkFile').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+    let obj = null; try{ obj = JSON.parse(await f.text()); }catch(err){}
+    restoreBackup(obj);
+  });
+  $('bkCsv').addEventListener('click', () => {
+    downloadBlob(new Blob([catchesCsv(CATCHES, id => catchSpeciesName(id), c => catchSpotName(c))], { type:'text/csv' }), 'gulf-catches-' + todayNZ() + '.csv');
+  });
+}
 /* ---- Where am I / take me back ---- */
 let POS = null, WATCH = null, ME = null, GUIDE = null, RESUME_TRACK = false, UNITS = LS.get('ghfp.units') === 'km' ? 'km' : 'nm';
 const fromYou = p => POS ? fmtDist(distKm(POS.lat, POS.lon, p.lat, p.lon), UNITS) + ' · ' + String(Math.round(bearingDeg(POS.lat, POS.lon, p.lat, p.lon)) % 360).padStart(3, '0') + '°T' : null;
@@ -2855,7 +3314,7 @@ function hourStripHTML(p, sum, ctx, tp, dateStr){
 function spotBodyHTML(p, live){
   const today = todayNZ(), days = Array.from({ length:7 }, (_, i) => addDaysStr(today, i)), dateStr = days[SPOT_DAY];
   const { sum, ctx, score, tp, rules } = spotScore(p, live, dateStr), sst = pinSST(live, p, dateStr);
-  const fish = likelyFor(p, monthOf(dateStr), sst.sst, SPECIES), region = regionFor(p.lat, p.lon);
+  const fish = likelyFor(p, monthOf(dateStr), sst.sst, SPECIES, historyFor(CATCHES, p.id, Date.now(), monthOf(dateStr))), region = regionFor(p.lat, p.lon);
   const ageMin = live.at ? Math.round((Date.now() - live.at) / 60000) : null;
   const tides = tidesFor(dateStr, tp.port);
   const wkday = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-NZ', { weekday:'short', timeZone:'UTC' });
@@ -2914,7 +3373,7 @@ async function findSpecies(id){
   if(!pins.length){ snack('Add a spot first: tap the map where you fish.'); return; }
   const today = todayNZ(), m = monthOf(today);
   await withTimeout(Promise.all(pins.map(p => getPinLive(p))), 20000, 'forecasts').catch(() => {});   // score with whatever has arrived
-  const hits = new Set(pins.filter(p => likelyFor(p, m, pinSST(PIN_LIVE[p.id], p, today).sst, [s]).some(r => r.band === 'likely')).map(p => p.id));
+  const hits = new Set(pins.filter(p => likelyFor(p, m, pinSST(PIN_LIVE[p.id], p, today).sst, [s], historyFor(CATCHES, p.id, Date.now(), m)).some(r => r.band === 'likely')).map(p => p.id));
   pins.forEach(p => updatePinBadge(p));
   Object.entries(PIN_MARKERS).forEach(([k, mkr]) => { const el = mkr.getElement(); el.classList.toggle('hl', hits.has(k)); el.classList.toggle('dim', !hits.has(k)); });
   if(MAP && hits.size){
@@ -3112,7 +3571,7 @@ function renderBestSpots(){
     const ranked = rankSpots(pins.map(p => {
       const live = PIN_LIVE[p.id], { sum, ctx, score, tp, rules } = spotScore(p, live, dateStr);
       return { pin:p, conditions:score.total, hasForecast:score.hasForecast, sum, best:ctx.best, tp, rulesOk:rules.ok, loading:!pinTried(p.id),
-        fish:likelyFor(p, monthOf(dateStr), pinSST(live, p, dateStr).sst, SPECIES) };
+        fish:likelyFor(p, monthOf(dateStr), pinSST(live, p, dateStr).sst, SPECIES, historyFor(CATCHES, p.id, Date.now(), monthOf(dateStr))) };
     }));
     const shown = BEST_ALL ? ranked : ranked.slice(0, 5);
     el.innerHTML = head + '<ol class="bs-list"' + (ranked.some(r => r.loading) ? ' aria-busy="true"' : '') + '>' + shown.map((r, i) => '<li><button type="button" class="bs-row" data-id="' + esc(r.pin.id) + '">'
@@ -3213,6 +3672,11 @@ function openSpotList(){
   const g = $('gpxAll'); if(g) g.addEventListener('click', () => downloadGPX(pins, 'My fishing spots'));
   sh.insertAdjacentHTML('beforeend', '<div id="offlineBox" hidden></div>'); renderOffline();
 }
+function spotCatchesLine(pinId){
+  const mine = CATCHES.filter(c => c.pinId === pinId); if(!mine.length) return '';
+  const counts = {}; mine.forEach(c => { const n = catchSpeciesName(c.species, c.otherName).toLowerCase(); counts[n] = (counts[n] || 0) + 1; });
+  return '<p class="small spot-catches">' + icon('hook') + ' Your catches here: ' + mine.length + ' (' + esc(Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([n, k]) => k > 1 ? n + ' ×' + k : n).join(', ')) + ')</p>';
+}
 function spotHeader(p){
   return '<div class="sheet-head"><div class="sheet-title-wrap"><h2 class="sheet-title">' + esc(p.name) + '</h2>'
     + '<div class="xsmall muted">' + p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + (p.depth ? ' · ' + p.depth + ' m' : '') + '</div>'
@@ -3221,9 +3685,11 @@ function spotHeader(p){
     + (p.habitats.length ? '<div class="chips sp-chips" style="margin:8px 0;">' + p.habitats.map(h => '<span class="chip static">' + habLabel(h) + '</span>').join('') + '</div>' : '')
     + (r => r && (r.dirs.length || r.maxKt != null || r.tide !== 'any') ? '<p class="xsmall muted spot-rules">Fishable: ' + esc([r.dirs.length ? r.dirs.join('/') + ' wind' : '', r.maxKt != null ? '≤' + r.maxKt + ' kt' : '', r.tide === 'in' ? 'incoming tide' : r.tide === 'out' ? 'outgoing tide' : ''].filter(Boolean).join(' · ')) + '</p>' : '')(p.rules)
     + (p.notes ? '<p class="small spot-notes">' + esc(p.notes) + '</p>' : '')
+    + spotCatchesLine(p.id)
     + '<div class="spot-actions"><button class="btn tonal" type="button" data-act="edit">' + icon('edit') + ' Edit</button>'
     + '<button class="btn outlined" type="button" data-act="gpx">' + icon('download') + ' GPX</button>'
     + '<button class="btn tonal" type="button" data-act="guide">' + icon('nav') + ' Guide me</button>'
+    + '<button class="btn tonal" type="button" data-act="catch">' + icon('hook') + ' Log catch</button>'
     + '<button class="btn text" type="button" data-act="del">' + icon('trash') + ' Delete</button></div>';
 }
 function wireSpotHeader(p){
@@ -3233,6 +3699,7 @@ function wireSpotHeader(p){
   sh.querySelector('[data-act=gpx]').addEventListener('click', () => downloadGPX([p], p.name));
   sh.querySelector('[data-act=units]').addEventListener('click', toggleUnits);
   sh.querySelector('[data-act=guide]').addEventListener('click', () => startGuide(p.id));
+  sh.querySelector('[data-act=catch]').addEventListener('click', () => openCatchForm({ pinId:p.id }));
   sh.querySelector('[data-act=del]').addEventListener('click', () => {
     if(!confirm('Delete “' + p.name + '”?')) return;
     deletePin(p.id); SEL_PIN = null; drawPinMarkers(); closeSheet(); snack('Deleted ' + p.name + '.');
@@ -3253,8 +3720,16 @@ function downloadGPX(pins, title){
 /* =========================================================================
    NAV, THEME, INIT
    ========================================================================= */
-const TABS = ['today','map','plan','species','biggame','reports'];
+const TABS = ['today','map','plan','species','catches','reports'];
+/* Species tab: Inshore or Big game (Big game used to be its own tab). */
+function setSpeciesView(v){
+  const big = v === 'biggame';
+  $('spInshore').hidden = big; $('spBigGame').hidden = !big;
+  document.querySelectorAll('.sp-view [data-spv]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.spv === (big ? 'biggame' : 'inshore'))));
+}
+function setupSpeciesView(){ document.querySelectorAll('.sp-view [data-spv]').forEach(b => b.addEventListener('click', () => setSpeciesView(b.dataset.spv))); }
 function setTab(name, fromHash){
+  if(name === 'biggame'){ name = 'species'; setSpeciesView('biggame'); fromHash = false; }   // old links and remembered tab; address becomes #species
   if(!TABS.includes(name)) name = 'today';
   TABS.forEach(t => { $('tab-' + t).hidden = t !== name; });
   document.querySelectorAll('.nav-item').forEach(b => { if(b.dataset.tab === name) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
@@ -3262,6 +3737,7 @@ function setTab(name, fromHash){
   if(name !== 'map'){ setTracking(false); RESUME_TRACK = false; }
   else if(GUIDE) setTracking(true);   // still guiding: pick the GPS back up
   if(name === 'map') openMapTab();
+  if(name === 'catches') loadCatches().then(renderCatches);
   if(name === 'plan' && (renderBriefing.dirty || !$('briefing').innerHTML)){ renderBriefing.dirty = false; renderBriefing(); }
   if(!fromHash && location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
   LS.set('ghfp.tab', name);
@@ -3324,7 +3800,9 @@ function init(){
   $('helpClose').addEventListener('click', () => $('helpDlg').close());
   $('helpDlg').addEventListener('click', e => { if(e.target === $('helpDlg')) $('helpDlg').close(); });
   window.addEventListener('scroll', () => $('appbar').classList.toggle('scrolled', window.scrollY > 4), { passive:true });
-  setupPlan(); setupMapUI(); setupPWA(); scheduleSpotSync(); $('mapHint').hidden = loadPins().length > 0; renderInSeason(); renderSpecies(); renderBigGame();
+  setupPlan(); setupMapUI(); setupPWA(); setupSpeciesView(); setupCatchForm(); loadCatches().then(renderCatches);
+  $('catchViewClose').addEventListener('click', () => $('catchView').close());
+  $('catchView').addEventListener('close', () => { if(VIEW_URL){ URL.revokeObjectURL(VIEW_URL); VIEW_URL = null; } }); scheduleSpotSync(); $('mapHint').hidden = loadPins().length > 0; renderInSeason(); renderSpecies(); renderBigGame();
   try{ renderReportsAll(); }catch(err){ LS.del(AI_KEY); renderReportsAll(); }
   renderToday();
   setTab(location.hash.slice(1) || LS.get('ghfp.tab') || 'today', true);

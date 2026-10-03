@@ -1,7 +1,7 @@
 /* Gulf Fishing Planner service worker. Built by tools/build-site.mjs, which fills in VERSION.
    Shell (the app, icons, MapLibre): stale-while-revalidate from a versioned cache, so it opens offline.
    Fonts: runtime cache. Weather, tiles, photos and AI calls: always network (the app handles failures). */
-const VERSION = '7138263c37';
+const VERSION = 'e5745826b5';
 const SHELL_CACHE = 'shell-' + VERSION, RUNTIME_CACHE = 'runtime-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png'];
 const LIBS = ['https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js', 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'];

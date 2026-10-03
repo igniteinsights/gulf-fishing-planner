@@ -354,6 +354,14 @@ details.bg .body .k{ color:var(--ink-2); font-size:.8125rem; display:block; }
 /* ===== Reports ===== */
 .ai-card{ background:var(--primary-container); color:var(--on-primary-container); border-radius:var(--radius-l); padding:20px; }
 .ai-card h3{ font-size:1.25rem; margin-bottom:6px; }
+.ai-toggle{ width:100%; display:flex; align-items:center; gap:12px; background:none; border:0; padding:0; margin:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.ai-toggle-text{ flex:1; min-width:0; }
+.ai-toggle h3{ margin:0; }
+.ai-sub{ display:block; opacity:.85; }
+.ai-toggle .icon{ flex:none; transition:transform .2s; }
+.ai-toggle[aria-expanded="true"] .icon{ transform:rotate(180deg); }
+.ai-body{ margin-top:12px; }
+.ai-body[hidden]{ display:none; }
 .ai-card .steps{ display:grid; gap:16px; margin-top:16px; }
 .ai-step{ display:grid; grid-template-columns:32px 1fr; gap:12px; }
 .ai-step .num{ width:32px; height:32px; border-radius:50%; background:var(--primary); color:var(--on-primary); display:grid; place-items:center; font-weight:600; }
@@ -2279,13 +2287,25 @@ function saveAiCfg(c){ AI_MEM = c; return LS.set(AI_CFG, c); }
 function defaultApp(){ return { android:'gemini', ios:'chatgpt', pc:'copilot' }[device()]; }
 function appById(id){ return AI_APPS.find(a => a.id === id) || AI_APPS[0]; }
 
+/* "Get the latest reports" is collapsed by default; it opens itself when it needs you (setup, an error, a message). */
+let AI_OPEN = false;
+function setAIOpen(open){
+  AI_OPEN = open;
+  const t = document.querySelector('#aiCard .ai-toggle'), b = $('aiBody');
+  if(t) t.setAttribute('aria-expanded', String(open));
+  if(b) b.hidden = !open;
+}
 function renderAICard(){
   const cfg = aiCfg(), card = $('aiCard'), prompt = buildAIPrompt(todayNZ());
   const extras = '<details><summary>See or copy the prompt</summary><textarea readonly id="aiPromptText" aria-label="Prompt text"></textarea><div class="actions" style="margin-top:8px;"><button class="btn text" id="aiCopy">' + icon('copy') + 'Copy prompt</button></div></details>';
   const paste = '<div id="pasteZone"><strong style="display:block;margin-top:14px;">Paste the reply</strong>'
     + '<div class="actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"><button class="btn filled" id="aiClip">' + icon('copy') + 'Paste reply from clipboard</button></div>'
     + '<textarea id="aiPaste" placeholder="…or paste it here yourself"></textarea><div class="actions" style="display:flex;gap:8px;margin-top:8px;"><button class="btn tonal" id="aiLoad">Load reports</button></div></div>';
-  let html = '<h3>Get the latest reports</h3>';
+  if(cfg.mode === 'setup' || (cfg.mode === 'auto' && cfg.lastError)) AI_OPEN = true;
+  const sub = cfg.mode === 'setup' ? 'Setting up automatic reports'
+    : cfg.mode === 'auto' ? (cfg.lastError ? 'Needs attention' : cfg.lastRun ? 'Automatic · last checked ' + new Date(cfg.lastRun).toLocaleString('en-NZ', { weekday:'short', hour:'numeric', minute:'2-digit' }) : 'Automatic with Gemini')
+    : 'Ask ' + appById(cfg.app).name + ' for the latest reports';
+  let html = '';
   if(cfg.mode === 'setup'){
     html += '<p class="small" style="margin:0 0 10px;">Two steps, once only. The key stays in this browser on this device and is never shared.</p>'
       + '<div class="ai-step"><div class="num">1</div><div><strong>Get a free key</strong><p class="small" style="margin:4px 0 8px;">Sign in with any Google account, choose <b>Create API key</b>, then copy it.</p><a class="btn outlined" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Open Google AI Studio</a></div></div>'
@@ -2305,7 +2325,9 @@ function renderAICard(){
   html += '<div class="ai-msg" id="aiMsg" role="status"></div>';
   if(cfg.mode !== 'setup') html += extras;
   html += '<div class="link-row">' + (cfg.mode === 'auto' ? '<button id="aiChange">Remove Gemini key (use copy and paste)</button>' : '') + '<button id="aiHow">How this works</button>' + (aiStored() ? '<button id="aiClear">Remove loaded reports</button>' : '') + '</div>';
-  card.innerHTML = html;
+  card.innerHTML = '<button type="button" class="ai-toggle" aria-expanded="' + AI_OPEN + '" aria-controls="aiBody"><span class="ai-toggle-text"><h3>Get the latest reports</h3><span class="small ai-sub">' + esc(sub) + '</span></span>' + icon('chev') + '</button>'
+    + '<div class="ai-body" id="aiBody"' + (AI_OPEN ? '' : ' hidden') + '>' + html + '</div>';
+  card.querySelector('.ai-toggle').addEventListener('click', () => setAIOpen(!AI_OPEN));
 
   const on = (id, fn) => { const el = $(id); if(el) el.addEventListener('click', fn); };
   if($('aiPromptText')) $('aiPromptText').value = prompt;
@@ -2333,7 +2355,7 @@ function renderAICard(){
   on('aiLoad', () => loadAIText($('aiPaste').value));
 }
 
-function aiMsg(text, isErr){ const m = $('aiMsg'); if(!m) return; m.className = 'ai-msg ' + (isErr ? 'err' : 'ok'); m.textContent = text; }
+function aiMsg(text, isErr){ const m = $('aiMsg'); if(!m) return; if(!AI_OPEN) setAIOpen(true); m.className = 'ai-msg ' + (isErr ? 'err' : 'ok'); m.textContent = text; }
 
 async function sendToApp(app){
   const prompt = buildAIPrompt(todayNZ());

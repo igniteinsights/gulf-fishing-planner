@@ -923,10 +923,21 @@ function bearingDeg(lat1, lon1, lat2, lon2){
   return (Math.atan2(y, x) / r + 360) % 360;
 }
 function fmtDist(km, unit){
-  if(km < 1) return Math.round(km * 100) * 10 + ' m';
-  const v = unit === 'km' ? km : km / 1.852;
-  return (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ' + (unit === 'km' ? 'km' : 'nm');
+  if(unit === 'km'){
+    if(km < 1){ const m = Math.round(km * 100) * 10; if(m < 1000) return m + ' m'; }   // 0.995 km reads "1.0 km", not "1000 m"
+    return (km < 10 ? km.toFixed(1) : Math.round(km)) + ' km';
+  }
+  const nm = km / 1.852;   // nautical stays nautical; only very close (< 0.1 nm) reads in metres
+  if(nm < 0.1) return Math.round(km * 100) * 10 + ' m';
+  return (nm < 1 ? nm.toFixed(2) : nm < 10 ? nm.toFixed(1) : Math.round(nm)) + ' nm';
 }
+/* Ring arcs follow the final score after a pressure nudge or rules penalty. */
+function scaleParts(parts, from, to){
+  const f = from ? to / from : 1, out = {};
+  Object.keys(parts).forEach(k => { out[k] = parts[k] == null ? null : parts[k] * f; });
+  return out;
+}
+function shouldRetry(failedAt, now, ms){ return failedAt == null || now - failedAt >= ms; }
 /* Ocean current nearest to a minute of the day; Open-Meteo gives km/h and the direction it flows towards. */
 function currentAt(marine, dateStr, minute){
   const h = marine && marine.hourly;
@@ -1608,7 +1619,7 @@ function scoreDay(o){
   for(const k of Object.keys(parts)){ if(parts[k] != null){ got += parts[k]; max += WEIGHTS[k]; } }
   const total = Math.round(got / max * 100);
   const nudge = pressureNudge(o.pressure && o.pressure.delta), total2 = nudgeScore(total, nudge);   // falling pressure helps, rising hurts
-  return { total:total2, parts, verdict:VERDICTS.find(v => total2 >= v[0])[1], hasForecast: parts.wind != null, pressure:o.pressure ? Object.assign({ nudge }, o.pressure) : null };
+  return { total:total2, parts:scaleParts(parts, total, total2), verdict:VERDICTS.find(v => total2 >= v[0])[1], hasForecast: parts.wind != null, pressure:o.pressure ? Object.assign({ nudge }, o.pressure) : null };
 }
 
 const AI_SCHEMA = '{"asAt":"YYYY-MM-DD","source":"name of the AI you are","reports":[{"date":"YYYY-MM-DD","area":"e.g. Outer Hauraki Gulf","type":"report | forum | club | news","title":"short headline","summary":"2-4 sentences: where, depth, method, bait or lure, what is biting and sizes","species":["snapper","kingfish"],"author":"writer or charter, if given","url":"https://link-to-the-page"}],"rules":[{"date":"YYYY-MM-DD","title":"short headline","summary":"what changed and when it starts","url":"https://link"}],"sst":"e.g. north-east North Island +0.5 °C above average (Earth Sciences NZ, Sep 2026)","notes":"optional"}';
@@ -2656,9 +2667,9 @@ function setTracking(on){
 function onPosition(){
   if(!POS) return;
   if(MAP){ if(!ME){ const el = document.createElement('div'); el.className = 'me-dot'; el.setAttribute('aria-label', 'Your position'); ME = new maplibregl.Marker({ element:el }).setLngLat([POS.lon, POS.lat]).addTo(MAP); } else ME.setLngLat([POS.lon, POS.lat]); }
-  const d = $('spotDist'), sp = SEL_PIN && loadPins().find(x => x.id === SEL_PIN);
+  const pins = loadPins(), d = $('spotDist'), sp = SEL_PIN && pins.find(x => x.id === SEL_PIN);
   if(d && sp){ d.textContent = 'From you: ' + fromYou(sp); d.hidden = false; }
-  document.querySelectorAll('.spot-row[data-id]').forEach(b => { const p = loadPins().find(x => x.id === b.dataset.id), el = b.querySelector('.row-dist'); if(p && el) el.textContent = fromYou(p); });
+  document.querySelectorAll('.spot-row[data-id]').forEach(b => { const p = pins.find(x => x.id === b.dataset.id), el = b.querySelector('.row-dist'); if(p && el) el.textContent = fromYou(p); });
   drawGuide();
 }
 function startGuide(id){ GUIDE = id; setTracking(true); drawGuide(); if(!isWide()) $('sheet').hidden = true; }   // phones: clear the map; the banner carries distance and bearing
@@ -2769,7 +2780,7 @@ function spotScore(p, live, dateStr){
   const sum = daySummary(live && !live.error ? live : null, dateStr), ctx = dayContext(dateStr, { lat:p.lat, lon:p.lon, port:tp.port });
   let score = scoreDay({ windKt:sum.windKt, gustKt:sum.gustKt, waveM:sum.waveM, tideFlow01:ctx.tideFlow01, bite01:ctx.bite01, pressure:sum.pressure });
   const rules = ruleCheck(p.rules, { windKt:sum.windKt, windDir:sum.windDir, tideRising:ctx.best && ctx.best.st ? ctx.best.st.rising : null });
-  if(!rules.ok){ const t = applyRules(score.total, rules); score = Object.assign({}, score, { total:t, verdict:VERDICTS.find(v => t >= v[0])[1] }); }   // your rules: halve it
+  if(!rules.ok){ const t = applyRules(score.total, rules); score = Object.assign({}, score, { total:t, parts:scaleParts(score.parts, score.total, t), verdict:VERDICTS.find(v => t >= v[0])[1] }); }   // your rules: halve it
   return { sum, ctx, tp, score, rules };
 }
 function openSpot(id, fly, day){
@@ -2837,7 +2848,7 @@ function spotBodyHTML(p, live){
       + row('Wind', sum.windKt == null ? '—' : '<span class="wind-tag ' + windClass(sum.windKt) + '">' + Math.round(sum.windKt) + ' kt ' + windDirLabel(sum.windDir) + (sum.gustKt != null ? ', gusts ' + Math.round(sum.gustKt) : '') + '</span>')
       + row('Sea', sum.waveM == null ? '—' : sum.waveM.toFixed(1) + ' m' + (sum.swellM != null ? ' · swell ' + sum.swellM.toFixed(1) + ' m' + (sum.swellP ? ' @ ' + Math.round(sum.swellP) + ' s' : '') : ''))
       + row('Water temp', sst.sst == null ? 'No water temp' : sst.sst.toFixed(1) + ' °C' + (sst.nearest ? ' <span class="muted small">(nearest open water: ' + esc(sst.nearest.name.split(' — ')[0]) + ')</span>' : ''))
-      + (c => row('Current at bite time', !c ? '—' : c.kt < 0.1 ? 'Slack' : '<span class="cur-arrow" style="transform:rotate(' + c.dir + 'deg)">' + icon('nav') + '</span>' + c.kt.toFixed(1) + ' kt toward ' + windDirLabel(c.dir)))
+      + (c => row('Current at bite time', !c ? '—' : c.kt < 0.1 ? 'Slack' : (c.dir == null ? c.kt.toFixed(1) + ' kt' : '<span class="cur-arrow" style="transform:rotate(' + c.dir + 'deg)">' + icon('nav') + '</span>' + c.kt.toFixed(1) + ' kt toward ' + windDirLabel(c.dir))))
         (currentAt(live && !live.error ? live.marine : null, dateStr, ctx.best ? Math.round(ctx.best.c) : 720))
       + row('Tides (' + TIDE_PORTS[tp.port].name + (tp.approx ? ', approx' : '') + ')', tides ? tides.map(t => (t.type === 'H' ? 'High ' : 'Low ') + fmtClock(t.min)).join(' · ') : '—')
       + row('Pressure', score.pressure ? esc(pressureLine(score.pressure).replace('Pressure ', '')) : '—')
@@ -2902,7 +2913,7 @@ const OFFLINE_REGIONS = {
   bop:{ name:'Bay of Plenty', bbox:[-38.0, 175.8, -37.1, 177.3], est:'~35 MB' }
 };
 const SPOT_KM = 5.556;   // 3 nm of close-up detail around each spot
-let OFF_JOB = null, OFF_LAST = null, spotSyncTimer = null;
+let OFF_JOB = null, OFF_LAST = null, spotSyncTimer = null, SPOTS_PENDING = false;
 const offlineOK = () => 'caches' in window && !!(navigator.serviceWorker && navigator.serviceWorker.controller) && /^https?:$/.test(location.protocol);
 const spotsOn = () => (LS.get('ghfp.offlineSpots') || {}).on !== false;
 /* Styles, fonts, icons and tile templates shared by every download. */
@@ -2937,33 +2948,35 @@ function spotsFiles(b, pins){
 }
 /* Fetch every missing file into the cache, 6 at a time, resuming past anything already saved. */
 async function fetchInto(cache, files, job){
-  const meta = await caches.open('tiles-meta');
+  const meta = await caches.open('tiles-meta'), fails = LS.get('ghfp.offlineFails') || {};
   job.total = files.length; renderOfflineProgress();
   let i = 0, stop = null;
   const worker = async () => {
     while(i < files.length && !job.cancel && !stop){
       const u = files[i++], isMeta = isMetaUrl(u), target = isMeta ? meta : cache;
       if(!isMeta && await cache.match(u)){ job.done++; continue; }   // tiles and fonts resume; meta is always refreshed
+      if(!isMeta && !shouldRetry(fails[u], Date.now(), 7 * 864e5)){ job.done++; job.fail++; continue; }   // failed recently: don't hammer it
       let ok = false;
       for(let a = 0; a < 3 && !ok && !stop; a++){
         try{ const r = await fetch(u, { mode:'cors', cache:isMeta ? 'no-store' : 'default' }); job.fetched++; if(r.ok){ await target.put(u, r); ok = true; } }
         catch(err){ if(err && err.name === 'QuotaExceededError') stop = 'Not enough space on this device.'; }
       }
-      if(!ok) job.fail++;
+      if(!ok){ job.fail++; fails[u] = Date.now(); } else delete fails[u];
       job.done++;
       if(job.done % 25 === 0) renderOfflineProgress();
     }
   };
   await Promise.all(Array.from({ length:6 }, worker));
+  LS.set('ghfp.offlineFails', fails);
   if(stop) throw new Error(stop);
 }
 async function runOfflineJob(region, quiet){
-  if(OFF_JOB) return;
+  if(OFF_JOB){ if(region === 'spots') SPOTS_PENDING = true; return; }   // run it when the current download ends
   OFF_JOB = { region, done:0, total:0, fail:0, fetched:0, pruned:0, cancel:false };
   renderOffline();
   let msg = null;
   try{
-    if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask the phone not to clear it
+    if(!quiet && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask the phone not to clear it (user-started only)
     const b = await offlineBase();
     await pruneOldVersions(b);
     if(region === 'spots'){
@@ -2988,6 +3001,7 @@ async function runOfflineJob(region, quiet){
     }
   }catch(err){ if(!quiet || /space/.test((err && err.message) || '')) msg = err && /space/.test(err.message || '') ? err.message : 'Download stopped. Tap Download to resume.'; }
   OFF_LAST = OFF_JOB; OFF_JOB = null; renderOffline();
+  if(SPOTS_PENDING && region !== 'spots'){ SPOTS_PENDING = false; scheduleSpotSync(); }
   if(msg) snack(msg);
 }
 /* After OpenFreeMap moves to a new tile version: drop old-version tiles and stray meta copies from every saved cache,
@@ -3180,7 +3194,7 @@ function openSpotList(){
 function spotHeader(p){
   return '<div class="sheet-head"><div class="sheet-title-wrap"><h2 class="sheet-title">' + esc(p.name) + '</h2>'
     + '<div class="xsmall muted">' + p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + (p.depth ? ' · ' + p.depth + ' m' : '') + '</div>'
-    + '<button class="dist-btn" type="button" id="spotDist" data-act="units" title="Tap to switch nm / km"' + (POS ? '>From you: ' + esc(fromYou(p)) : ' hidden>') + '</button></div>'
+    + '<button class="dist-btn" type="button" id="spotDist" data-act="units" title="Tap to switch nm / km" aria-describedby="distHint"' + (POS ? '>From you: ' + esc(fromYou(p)) : ' hidden>') + '</button><span class="sr-only" id="distHint">Switch between nautical miles and kilometres</span></div>'
     + '<button class="icon-btn" type="button" data-act="close" aria-label="' + (isWide() ? 'Back to my spots' : 'Close') + '">' + icon('close') + '</button></div>'
     + (p.habitats.length ? '<div class="chips sp-chips" style="margin:8px 0;">' + p.habitats.map(h => '<span class="chip static">' + habLabel(h) + '</span>').join('') + '</div>' : '')
     + (r => r && (r.dirs.length || r.maxKt != null || r.tide !== 'any') ? '<p class="xsmall muted spot-rules">Fishable: ' + esc([r.dirs.length ? r.dirs.join('/') + ' wind' : '', r.maxKt != null ? '≤' + r.maxKt + ' kt' : '', r.tide === 'in' ? 'incoming tide' : r.tide === 'out' ? 'outgoing tide' : ''].filter(Boolean).join(' · ')) + '</p>' : '')(p.rules)

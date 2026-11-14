@@ -993,6 +993,20 @@ function cachedLiveUsable(saved, now, maxMs){
 function isFresh(d, now, okMs, errMs){ return !!d && now - d.at < (d.error ? errMs : okMs); }
 /* Don't refetch: data is fresh, or a fetch failed within errMs (even if older good data was kept). */
 function triedRecently(d, now, okMs, errMs){ return isFresh(d, now, okMs, errMs) || (!!d && d.failedAt != null && now - d.failedAt < errMs); }
+/* Should the Today forecast be fetched now? s = { liveAt, failedAt, inFlightAt } (ms or null).
+   Not while a fetch is running (unless it has hung past hungMs, e.g. the phone suspended it); due when there is no
+   forecast, it is staleMs old or stamped in the future (clock changed); after a failure, wait retryMs between tries. */
+function liveRefreshDue(s, now, o){
+  if(s.inFlightAt != null && now - s.inFlightAt < o.hungMs) return false;
+  if(s.liveAt != null && s.liveAt <= now + 60e3 && now - s.liveAt < o.staleMs) return false;
+  return s.failedAt == null || now - s.failedAt >= o.retryMs || now < s.failedAt;
+}
+/* A signal that aborts after ms, on browsers without AbortSignal.timeout too (iOS before 16). */
+function timeoutSignal(ms){
+  if(typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+  if(typeof AbortController === 'undefined') return undefined;
+  const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal;
+}
 function portFor(lat, lon, ports){
   return nearestPoint(lat, lon, Object.entries(ports).map(([key, p]) => ({ key, lat:p.lat, lon:p.lon }))).key;
 }
@@ -2846,32 +2860,66 @@ function openHelp(which, section){
 async function fetchPoint(p){
   const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.lat + '&longitude=' + p.lon + '&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl&timezone=Pacific%2FAuckland&forecast_days=16';
   const marineUrl = 'https://marine-api.open-meteo.com/v1/marine?latitude=' + p.lat + '&longitude=' + p.lon + '&hourly=wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,sea_surface_temperature,ocean_current_velocity,ocean_current_direction&timezone=Pacific%2FAuckland&forecast_days=8';
-  const get = u => fetch(u, { cache:'no-store', signal:AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined }).then(r => { if(!r.ok) throw new Error(r.status); return r.json(); });
+  // A cache-busting stamp as well as no-store: some WebViews ignore the cache option. Each request has a hard timeout,
+  // because a request the phone suspended in the background can otherwise never settle.
+  const get = u => withTimeout(fetch(u + '&_=' + Date.now(), { cache:'no-store', signal:timeoutSignal(15000) })
+    .then(r => { if(!r.ok) throw new Error(r.status); return r.json(); }), 20000, 'forecast')
+    .then(j => { if(!j || !j.hourly || !Array.isArray(j.hourly.time)) throw new Error('bad forecast'); return j; });
   const [weather, marine] = await Promise.all([ get(weatherUrl), get(marineUrl).catch(() => null) ]);
   return { weather, marine };
 }
 
-async function refreshAll(){
-  const btn = $('refreshBtn'), dot = $('liveDot'), label = $('liveLabel');
+/* Refresh scheduling. The installed app is mostly resumed rather than relaunched, and phones pause timers in the
+   background, so every way back into the app (resume, focus, back-forward restore, reconnect, a once-a-minute tick)
+   asks whether a refresh is due. A failed attempt retries a minute later; a hung one is abandoned after 45 s. */
+const LIVE_TIMING = { staleMs:15 * 60e3, retryMs:60e3, hungMs:45e3 };
+let LIVE_RUN = null, LIVE_FAILED_AT = null, LIVE_DRAWN_HOUR = '';
+const nowHourKey = () => { const p = nzParts(); return p.date + 'T' + Math.floor(p.min / 60); };
+function safely(f){ try{ f(); }catch(e){ console.error(e); } }
+function renderLiveViews(){
+  LIVE_DRAWN_HOUR = nowHourKey();
+  REFERENCE_POINTS.forEach(p => safely(() => renderAreaCard(p)));
+  [renderToday, renderSST, renderVintage, renderReportsAge].forEach(safely);
+  safely(() => { if(!$('tab-plan').hidden) renderBriefing(); else renderBriefing.dirty = true; });
+}
+function refreshIfDue(){
+  if(document.visibilityState === 'hidden') return;
+  const st = { liveAt:LIVE_AT ? LIVE_AT.getTime() : null, failedAt:LIVE_FAILED_AT, inFlightAt:LIVE_RUN ? LIVE_RUN.at : null };
+  if(liveRefreshDue(st, Date.now(), LIVE_TIMING)) refreshAll();
+  else if(!LIVE_RUN && nowHourKey() !== LIVE_DRAWN_HOUR) renderLiveViews();   // keep "now" figures on the current hour
+}
+function refreshAll(){
+  if(LIVE_RUN && Date.now() - LIVE_RUN.at < LIVE_TIMING.hungMs) return LIVE_RUN.p;
+  const run = { at:Date.now() };
+  LIVE_RUN = run;
+  run.p = doRefresh(run).finally(() => { if(LIVE_RUN === run) LIVE_RUN = null; });
+  return run.p;
+}
+async function doRefresh(run){
+  const btn = $('refreshBtn'), dot = $('liveDot'), label = $('liveLabel'), current = () => LIVE_RUN === run;
   btn.classList.add('spin'); btn.disabled = true;
   label.textContent = LIVE_AT ? (Date.now() - LIVE_AT < 60e3 ? 'Updating…' : 'Saved ' + liveStamp(LIVE_AT) + ' · updating…') : 'Updating…';
   let fresh = 0;
-  const results = await Promise.all(REFERENCE_POINTS.map(p => fetchPoint(p).then(d => { LIVE[p.key] = d; fresh++; },
-      () => { if(!LIVE[p.key] || LIVE[p.key].error) LIVE[p.key] = { error:true }; })   // keep the last good forecast
-    .then(() => renderAreaCard(p))));
-  const haveData = REFERENCE_POINTS.some(p => LIVE[p.key] && !LIVE[p.key].error);
-  if(fresh){ LIVE_AT = new Date(); dot.className = 'live-dot ok'; label.textContent = 'Updated ' + liveStamp(LIVE_AT); saveLive(); }
-  else if(haveData && LIVE_AT){ dot.className = 'live-dot warn'; label.textContent = 'Offline · forecast saved ' + liveStamp(LIVE_AT); }
-  else { dot.className = 'live-dot err'; label.textContent = 'Offline: showing tides and moon only'; }
-  btn.classList.remove('spin'); btn.disabled = false;
-  renderToday(); renderSST(); renderVintage(); renderReportsAge();
-  runGemini(false);
-  if(!$('tab-plan').hidden) renderBriefing(); else renderBriefing.dirty = true;
   try{
-    refreshVisiblePins(true);
-    if(SEL_PIN){ const sp = loadPins().find(p => p.id === SEL_PIN); if(sp) renderSpotBody(sp, true); }
-  }catch(e){ /* spots are extras: never let them stop the core refresh */ }
-  return results;
+    await Promise.all(REFERENCE_POINTS.map(p => fetchPoint(p).then(d => { LIVE[p.key] = d; fresh++; },
+        () => { if(!LIVE[p.key] || LIVE[p.key].error) LIVE[p.key] = { error:true }; })   // keep the last good forecast
+      .then(() => safely(() => renderAreaCard(p)))));
+    if(fresh){ LIVE_AT = new Date(); LIVE_FAILED_AT = null; saveLive(); }
+    else if(current()) LIVE_FAILED_AT = Date.now();
+    if(!current() && !fresh) return;   // an abandoned run that failed: leave the newer run's status alone
+    const haveData = REFERENCE_POINTS.some(p => LIVE[p.key] && !LIVE[p.key].error);
+    if(fresh){ dot.className = 'live-dot ok'; label.textContent = 'Updated ' + liveStamp(LIVE_AT); }
+    else if(haveData && LIVE_AT){ dot.className = 'live-dot warn'; label.textContent = 'Offline · forecast saved ' + liveStamp(LIVE_AT) + ' · retrying'; }
+    else { dot.className = 'live-dot err'; label.textContent = 'Offline: showing tides and moon only · retrying'; }
+    renderLiveViews();
+    safely(() => runGemini(false));
+    safely(() => {   // spots are extras: never let them stop the core refresh
+      refreshVisiblePins(true);
+      if(SEL_PIN){ const sp = loadPins().find(p => p.id === SEL_PIN); if(sp) renderSpotBody(sp, true); }
+    });
+  }finally{
+    if(current() || !LIVE_RUN){ btn.classList.remove('spin'); btn.disabled = false; }
+  }
 }
 
 /* =========================================================================
@@ -4038,7 +4086,7 @@ function init(){
   REFERENCE_POINTS.forEach(renderAreaCard);
   document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
   window.addEventListener('hashchange', () => setTab(location.hash.slice(1), true));
-  $('refreshBtn').addEventListener('click', refreshAll);
+  $('refreshBtn').addEventListener('click', () => refreshAll());
   $('themeBtn').addEventListener('click', toggleTheme);
   $('helpBtn').addEventListener('click', () => openHelp());
   $('helpClose').addEventListener('click', () => $('helpDlg').close());
@@ -4053,10 +4101,13 @@ function init(){
   refreshAll();
   setInterval(() => renderTideToday(), 60000);
   let lastW = chartW(); let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { measureChrome(); if(Math.abs(chartW() - lastW) > 40){ lastW = chartW(); renderTideToday(); if(!$("tab-plan").hidden) renderBriefing(); else renderBriefing.dirty = true; } }, 200); });
-  setInterval(() => { if(document.visibilityState === 'visible') refreshAll(); }, 30 * 60000);
+  setInterval(refreshIfDue, 60e3);
   document.addEventListener('visibilitychange', onReturnFromApp);
   window.addEventListener('focus', onReturnFromApp);
-  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && LIVE_AT && Date.now() - LIVE_AT > 30 * 60000) refreshAll(); });
+  document.addEventListener('visibilitychange', refreshIfDue);
+  window.addEventListener('focus', refreshIfDue);
+  window.addEventListener('pageshow', refreshIfDue);
+  window.addEventListener('online', () => { LIVE_FAILED_AT = null; refreshIfDue(); });   // signal is back: retry now, not after the back-off
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
